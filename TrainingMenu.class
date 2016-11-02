@@ -1,0 +1,67 @@
+package view;
+
+import java.awt.Dimension;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.JButton;
+import javax.swing.JPanel;
+
+public class TrainingMenu
+  extends JPanel
+{
+  private DefaultFrame baseFrame;
+  
+  public TrainingMenu(DefaultFrame frame)
+  {
+    setLayout(null);
+    this.baseFrame = frame;
+    instantiatePanel();
+  }
+  
+  private void instantiatePanel()
+  {
+    setLayout(null);
+    createBtnTraining();
+    createBtnSaveTrainingWords();
+  }
+  
+  private void createBtnTraining()
+  {
+    JButton btnImageIntroTest = new JButton("Start Training");
+    btnImageIntroTest.addActionListener(new ActionListener()
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        TrainingMenu.this.showTrainingWords();
+      }
+    });
+    btnImageIntroTest.setSize((int)(this.baseFrame.xSize * 0.25D), (int)(this.baseFrame.ySize * 0.05D));
+    btnImageIntroTest.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * btnImageIntroTest.getSize().getWidth()), (int)(this.baseFrame.ySize * 0.4D));
+    add(btnImageIntroTest);
+  }
+  
+  private void createBtnSaveTrainingWords()
+  {
+    JButton btnSaveTrainingWords = new JButton("Save Training Words And Exit");
+    btnSaveTrainingWords.addActionListener(new ActionListener()
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        TrainingMenu.this.finish();
+      }
+    });
+    btnSaveTrainingWords.setSize((int)(this.baseFrame.xSize * 0.25D), (int)(this.baseFrame.ySize * 0.05D));
+    btnSaveTrainingWords.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * btnSaveTrainingWords.getSize().getWidth()), (int)(this.baseFrame.ySize * 0.5D));
+    add(btnSaveTrainingWords);
+  }
+  
+  private void showTrainingWords()
+  {
+    this.baseFrame.showLoadTrainingWords(this);
+  }
+  
+  private void finish()
+  {
+    this.baseFrame.finish(this);
+  }
+}

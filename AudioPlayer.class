@@ -1,0 +1,33 @@
+package services;
+
+import java.io.File;
+import java.net.URI;
+import java.net.URL;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.LineListener;
+
+public class AudioPlayer
+{
+  public static void playAudioFileFromPath(String filepath, LineListener listener)
+  {
+    Path currentRelativePath = Paths.get("", new String[0]);
+    String path = currentRelativePath.toAbsolutePath().toString() + "\\" + "Recordings" + "\\" + filepath;
+    try
+    {
+      URL url = new File(path).toURI().toURL();
+      AudioInputStream inputStream = AudioSystem.getAudioInputStream(url);
+      Clip clip = AudioSystem.getClip();
+      clip.addLineListener(listener);
+      clip.open(inputStream);
+      clip.start();
+    }
+    catch (Exception e)
+    {
+      e.printStackTrace();
+    }
+  }
+}

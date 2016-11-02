@@ -1,0 +1,234 @@
+package view;
+
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.awt.Image;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import javax.sound.sampled.LineEvent;
+import javax.sound.sampled.LineEvent.Type;
+import javax.sound.sampled.LineListener;
+import javax.swing.AbstractButton;
+import javax.swing.ButtonGroup;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import services.AudioPlayer;
+import services.ImageLibrary;
+
+public class ImagePostTestWeirdIntro
+  extends BasePanel
+{
+  ButtonGroup btnGroup = new ButtonGroup();
+  JLabel lblWord;
+  JLabel lblImg;
+  JButton btnOk;
+  ArrayList<ImageIcon> images = ImageLibrary.getRatingTestIntroImages();
+  String[] answers = { "1", "1", "5", "9" };
+  private int audioIndex = 1;
+  private int imageIndex = 0;
+  LineListener listener;
+  
+  public ImagePostTestWeirdIntro(DefaultFrame frame)
+  {
+    super(frame);
+    instantiatePanel();
+    this.listener = new LineListener()
+    {
+      public void update(LineEvent event)
+      {
+        if (event.getType() == LineEvent.Type.STOP)
+        {
+          ImagePostTestWeirdIntro.this.audioIndex += 1;
+          ImagePostTestWeirdIntro.this.start();
+        }
+      }
+    };
+    AudioPlayer.playAudioFileFromPath("ratings1.wav", this.listener);
+  }
+  
+  private void instantiatePanel()
+  {
+    setLayout(null);
+    createBtnOk();
+    createBtnRatings();
+    createlblWord();
+    createlblImage();
+  }
+  
+  public void start()
+  {
+    cycle();
+  }
+  
+  private void cycle()
+  {
+    disableOkayButton();
+    populateView();
+    playInstructionsClip();
+    this.imageIndex += 1;
+  }
+  
+  private void populateView()
+  {
+    this.lblWord.setText("Dog");
+    this.lblImg.setIcon(resizeImage((ImageIcon)this.images.get(this.imageIndex), this.lblImg.getSize().width, this.lblImg.getSize().height));
+    revalidate();
+  }
+  
+  private void validateInput()
+  {
+    if (getSelectedButtonText() == null) {
+      JOptionPane.showMessageDialog(this, "Please select a rating.");
+    } else if (getSelectedButtonText().compareTo(this.answers[(this.imageIndex - 1)]) == 0) {
+      recordAnswer();
+    } else {
+      JOptionPane.showMessageDialog(this, "Please try again.");
+    }
+  }
+  
+  private void playInstructionsClip()
+  {
+    if (this.audioIndex > 1)
+    {
+      this.listener = new LineListener()
+      {
+        public void update(LineEvent event)
+        {
+          if (event.getType() == LineEvent.Type.STOP)
+          {
+            ImagePostTestWeirdIntro.this.audioIndex += 1;
+            ImagePostTestWeirdIntro.this.enableOkayButton();
+          }
+        }
+      };
+      AudioPlayer.playAudioFileFromPath("ratings" + this.audioIndex + ".wav", this.listener);
+    }
+  }
+  
+  private void createBtnOk()
+  {
+    this.btnOk = new JButton("Ok");
+    disableOkayButton();
+    this.btnOk.addActionListener(new ActionListener()
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        ImagePostTestWeirdIntro.this.validateInput();
+      }
+    });
+    this.btnOk.setSize((int)(this.baseFrame.xSize * 0.15D), (int)(this.baseFrame.ySize * 0.05D));
+    this.btnOk.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * this.btnOk.getSize().getWidth()), 
+      (int)(this.baseFrame.ySize * 0.85D));
+    add(this.btnOk);
+  }
+  
+  private void recordAnswer()
+  {
+    if (this.imageIndex > 3)
+    {
+      this.baseFrame.showInstructions("PostTestWeirdTransition", this);
+    }
+    else
+    {
+      this.btnGroup.clearSelection();
+      cycle();
+    }
+  }
+  
+  private void createlblWord()
+  {
+    this.lblWord = new JLabel();
+    Font labelFont = this.lblWord.getFont();
+    this.lblWord.setFont(new Font(labelFont.getName(), 0, 48));
+    this.lblWord.setHorizontalAlignment(0);
+    this.lblWord.setSize((int)(this.baseFrame.xSize * 0.9D), (int)(this.baseFrame.ySize * 0.1D));
+    this.lblWord.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * this.lblWord.getSize().getWidth()), 10);
+    add(this.lblWord);
+  }
+  
+  private void createlblImage()
+  {
+    this.lblImg = new JLabel();
+    this.lblImg.setSize((int)(this.baseFrame.xSize * 0.65D), (int)(this.baseFrame.ySize * 0.6D));
+    this.lblImg.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * this.lblImg.getSize().getWidth()), 
+      (int)(this.baseFrame.ySize * 0.1D));
+    add(this.lblImg);
+  }
+  
+  private void createBtnRatings()
+  {
+    JRadioButton btn1 = new JRadioButton("1");
+    JRadioButton btn2 = new JRadioButton("2");
+    JRadioButton btn3 = new JRadioButton("3");
+    JRadioButton btn4 = new JRadioButton("4");
+    JRadioButton btn5 = new JRadioButton("5");
+    JRadioButton btn6 = new JRadioButton("6");
+    JRadioButton btn7 = new JRadioButton("7");
+    JRadioButton btn8 = new JRadioButton("8");
+    JRadioButton btn9 = new JRadioButton("9");
+    
+    this.btnGroup.add(btn1);
+    this.btnGroup.add(btn2);
+    this.btnGroup.add(btn3);
+    this.btnGroup.add(btn4);
+    this.btnGroup.add(btn5);
+    this.btnGroup.add(btn6);
+    this.btnGroup.add(btn7);
+    this.btnGroup.add(btn8);
+    this.btnGroup.add(btn9);
+    
+    JPanel radioPanel = new JPanel();
+    radioPanel.setLayout(new GridLayout(1, 9, 5, 0));
+    radioPanel.add(btn1);
+    radioPanel.add(btn2);
+    radioPanel.add(btn3);
+    radioPanel.add(btn4);
+    radioPanel.add(btn5);
+    radioPanel.add(btn6);
+    radioPanel.add(btn7);
+    radioPanel.add(btn8);
+    radioPanel.add(btn9);
+    radioPanel.setSize((int)(this.baseFrame.xSize * 0.4D), (int)(this.baseFrame.ySize * 0.05D));
+    radioPanel.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * radioPanel.getSize().getWidth()), 
+      (int)(this.baseFrame.ySize * 0.8D));
+    add(radioPanel);
+  }
+  
+  public String getSelectedButtonText()
+  {
+    for (Enumeration<AbstractButton> buttons = this.btnGroup.getElements(); buttons.hasMoreElements();)
+    {
+      AbstractButton button = (AbstractButton)buttons.nextElement();
+      if (button.isSelected()) {
+        return button.getText();
+      }
+    }
+    return null;
+  }
+  
+  public static ImageIcon resizeImage(ImageIcon imageIcon, int width, int height)
+  {
+    Image image = imageIcon.getImage();
+    
+    Image newimg = image.getScaledInstance(width - 15, height - 15, 4);
+    
+    return new ImageIcon(newimg);
+  }
+  
+  public void disableOkayButton()
+  {
+    this.btnOk.setEnabled(false);
+  }
+  
+  public void enableOkayButton()
+  {
+    this.btnOk.setEnabled(true);
+  }
+}

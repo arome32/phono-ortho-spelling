@@ -1,0 +1,91 @@
+package view;
+
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.sound.sampled.LineEvent;
+import javax.sound.sampled.LineEvent.Type;
+import javax.sound.sampled.LineListener;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import services.AudioPlayer;
+
+public class Instructions
+  extends JPanel
+{
+  private DefaultFrame baseFrame;
+  private String nextView;
+  private String name;
+  JButton btnStart;
+  LineListener listener;
+  
+  public Instructions(DefaultFrame frame, String name, String audioPath, String nextView)
+  {
+    this.baseFrame = frame;
+    this.nextView = nextView;
+    this.name = name;
+    instantiatePanel();
+    playInstructions(audioPath);
+  }
+  
+  private void instantiatePanel()
+  {
+    setLayout(null);
+    createBtnStart();
+    createlblTitle();
+  }
+  
+  private void playInstructions(String audioPath)
+  {
+    if (!audioPath.isEmpty())
+    {
+      this.listener = new LineListener()
+      {
+        public void update(LineEvent event)
+        {
+          if (event.getType() == LineEvent.Type.STOP) {
+            Instructions.this.btnStart.setEnabled(true);
+          }
+        }
+      };
+      AudioPlayer.playAudioFileFromPath(audioPath, this.listener);
+    }
+  }
+  
+  private void createBtnStart()
+  {
+    this.btnStart = new JButton("Start");
+    if (this.name.compareTo("Rating Test") != 0) {
+      this.btnStart.setEnabled(false);
+    }
+    this.btnStart.addActionListener(new ActionListener()
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        Instructions.this.finish();
+      }
+    });
+    this.btnStart.setSize((int)(this.baseFrame.xSize * 0.15D), (int)(this.baseFrame.ySize * 0.05D));
+    this.btnStart.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * this.btnStart.getSize().getWidth()), (int)(this.baseFrame.ySize * 0.5D));
+    add(this.btnStart);
+  }
+  
+  private void createlblTitle()
+  {
+    JLabel lblTitle = new JLabel(this.name);
+    Font labelFont = lblTitle.getFont();
+    lblTitle.setFont(new Font(labelFont.getName(), 0, 48));
+    lblTitle.setHorizontalAlignment(0);
+    lblTitle.setSize((int)(this.baseFrame.xSize * 0.9D), (int)(this.baseFrame.ySize * 0.1D));
+    lblTitle.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * lblTitle.getSize().getWidth()), 10);
+    
+    add(lblTitle);
+  }
+  
+  private void finish()
+  {
+    this.baseFrame.start(this.nextView, this);
+  }
+}

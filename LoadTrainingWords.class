@@ -1,0 +1,161 @@
+package view;
+
+import java.awt.Dimension;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.File;
+import java.util.ArrayList;
+import javax.swing.JButton;
+import javax.swing.JFileChooser;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.filechooser.FileFilter;
+import model.Session;
+import services.WordLibrary;
+
+public class LoadTrainingWords
+  extends JPanel
+{
+  private DefaultFrame baseFrame;
+  private JTextArea loadedWords;
+  JFileChooser fileChooser;
+  JButton createBtnTraining;
+  
+  public LoadTrainingWords(DefaultFrame frame)
+  {
+    setLayout(null);
+    this.baseFrame = frame;
+    instantiatePanel();
+  }
+  
+  private void instantiatePanel()
+  {
+    setLayout(null);
+    createBtnTraining();
+    createFileChooser();
+    createTextArea();
+    if (Session.preTestRecords.size() == 0)
+    {
+      createBtnBack();
+      createBtnFileChooser();
+    }
+    this.loadedWords.setText(Session.getTrainingWordsAsString());
+    checkIfEnoughTrainingWords();
+  }
+  
+  private void createTextArea()
+  {
+    this.loadedWords = new JTextArea();
+    this.loadedWords.setEditable(false);
+    JScrollPane scroll = new JScrollPane(this.loadedWords, 22, 
+      32);
+    scroll.setSize((int)(this.baseFrame.xSize * 0.2D), (int)(this.baseFrame.ySize * 0.5D));
+    scroll.setLocation((int)(this.baseFrame.xSize * 0.7D - 0.5D * scroll.getSize().getWidth()), 
+      (int)(this.baseFrame.ySize * 0.2D));
+    add(scroll);
+    setVisible(true);
+  }
+  
+  private void createFileChooser()
+  {
+    this.fileChooser = new JFileChooser(new File(System.getProperty("user.home"), "\\Desktop\\"));
+    this.fileChooser.setFileFilter(new FileFilter()
+    {
+      public boolean accept(File f)
+      {
+        String name = f.getName();
+        return name.endsWith(".txt");
+      }
+      
+      public String getDescription()
+      {
+        return "*.txt";
+      }
+    });
+  }
+  
+  private void openFileChooser()
+  {
+    int result = this.fileChooser.showOpenDialog(this);
+    if (result == 0)
+    {
+      File selectedFile = this.fileChooser.getSelectedFile();
+      WordLibrary.loadSavedTrainedWords(selectedFile.getAbsolutePath());
+      this.loadedWords.setText(Session.getTrainingWordsAsString());
+      revalidate();
+    }
+    checkIfEnoughTrainingWords();
+  }
+  
+  private void checkIfEnoughTrainingWords()
+  {
+    if ((Session.getTrainingWords().size() >= 12) && (Session.getTrainingWords().size() % 2 == 0))
+    {
+      this.createBtnTraining.setEnabled(true);
+    }
+    else
+    {
+      this.createBtnTraining.setEnabled(false);
+      this.createBtnTraining.setToolTipText("Need at least 12 training words.");
+    }
+  }
+  
+  private void createBtnTraining()
+  {
+    this.createBtnTraining = new JButton("Start Training");
+    this.createBtnTraining.addActionListener(new ActionListener()
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        LoadTrainingWords.this.startTraining();
+      }
+    });
+    this.createBtnTraining.setSize((int)(this.baseFrame.xSize * 0.15D), (int)(this.baseFrame.ySize * 0.05D));
+    this.createBtnTraining.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * this.createBtnTraining.getSize().getWidth()), 
+      (int)(this.baseFrame.ySize * 0.4D));
+    add(this.createBtnTraining);
+  }
+  
+  private void createBtnFileChooser()
+  {
+    JButton btnFileChooser = new JButton("Choose a File");
+    btnFileChooser.addActionListener(new ActionListener()
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        LoadTrainingWords.this.openFileChooser();
+      }
+    });
+    btnFileChooser.setSize((int)(this.baseFrame.xSize * 0.15D), (int)(this.baseFrame.ySize * 0.05D));
+    btnFileChooser.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * btnFileChooser.getSize().getWidth()), 
+      (int)(this.baseFrame.ySize * 0.5D));
+    add(btnFileChooser);
+  }
+  
+  private void startTraining()
+  {
+    this.baseFrame.showInstructions("ImageTraining", this);
+  }
+  
+  private void createBtnBack()
+  {
+    JButton createBtnBack = new JButton("Back");
+    createBtnBack.addActionListener(new ActionListener()
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        LoadTrainingWords.this.backToMenu();
+      }
+    });
+    createBtnBack.setSize((int)(this.baseFrame.xSize * 0.1D), (int)(this.baseFrame.ySize * 0.05D));
+    createBtnBack.setLocation((int)(this.baseFrame.xSize * 0.1D - 0.5D * createBtnBack.getSize().getWidth()), 
+      (int)(this.baseFrame.ySize * 0.1D));
+    add(createBtnBack);
+  }
+  
+  private void backToMenu()
+  {
+    this.baseFrame.showMenu(this);
+  }
+}

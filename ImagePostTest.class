@@ -1,0 +1,154 @@
+package services;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import model.Category;
+import model.Session;
+import model.VocWord;
+
+public class WordLibrary
+{
+  private static List<Category> categoriesReference = new ArrayList();
+  
+  public static void loadWords()
+  {
+    String fileName = "\\words.txt";
+    Path currentRelativePath = Paths.get("", new String[0]);
+    String path = currentRelativePath.toAbsolutePath().toString() + fileName;
+    File file = new File(path);
+    try
+    {
+      BufferedReader in = new BufferedReader(new FileReader(file));
+      String firstLine = in.readLine();
+      if (firstLine != null)
+      {
+        Category currentCategory = new Category(firstLine);
+        categoriesReference.add(currentCategory);
+        while ((line = in.readLine()) != null)
+        {
+          String line;
+          if (line.isEmpty())
+          {
+            line = in.readLine();
+            if (line != null)
+            {
+              currentCategory = new Category(line);
+              categoriesReference.add(currentCategory);
+            }
+          }
+          else
+          {
+            currentCategory.words.add(new VocWord(line));
+          }
+        }
+      }
+      in.close();
+    }
+    catch (FileNotFoundException e)
+    {
+      System.out.println("File " + path + " was not found");
+      e.printStackTrace();
+    }
+    catch (IOException e)
+    {
+      System.out.println("Error while reading in file");
+      e.printStackTrace();
+    }
+    int extra = 16 % categoriesReference.size();
+    Collections.shuffle(categoriesReference);
+    Iterator localIterator;
+    for (String line = categoriesReference.iterator(); line.hasNext(); localIterator.hasNext())
+    {
+      Category c = (Category)line.next();
+      c.remainingAllowedTrainingWords = (16 / categoriesReference.size());
+      if (extra > 0)
+      {
+        c.remainingAllowedTrainingWords += 1;
+        extra--;
+      }
+      System.out.println("");
+      System.out.println(c.name);
+      localIterator = c.words.iterator(); continue;VocWord vw = (VocWord)localIterator.next();
+      System.out.println(vw.word);
+    }
+  }
+  
+  public static ArrayList<Category> getCategories()
+  {
+    return (ArrayList)categoriesReference;
+  }
+  
+  public static ArrayList<VocWord> getAllWords()
+  {
+    ArrayList<VocWord> temp = new ArrayList();
+    Iterator localIterator2;
+    for (Iterator localIterator1 = categoriesReference.iterator(); localIterator1.hasNext(); localIterator2.hasNext())
+    {
+      Category category = (Category)localIterator1.next();
+      localIterator2 = category.words.iterator(); continue;VocWord vw = (VocWord)localIterator2.next();
+      temp.add(vw);
+    }
+    return temp;
+  }
+  
+  public static ArrayList<VocWord> getNonTrainedWords()
+  {
+    ArrayList<VocWord> temp = getAllWords();
+    temp.removeAll(Session.getTrainingWords());
+    return temp;
+  }
+  
+  public static void loadSavedTrainedWords(String filePath)
+  {
+    
+    try
+    {
+      BufferedReader in = new BufferedReader(new FileReader(filePath));
+      Iterator localIterator1;
+      String line;
+      for (; (line = in.readLine()) != null; localIterator1.hasNext())
+      {
+        String line;
+        List<String> items = Arrays.asList(line.split(","));
+        localIterator1 = items.iterator(); continue;String s = (String)localIterator1.next();
+        for (VocWord vw : getAllWords()) {
+          if (vw.word.compareTo(s) == 0) {
+            Session.addTrainingWords(vw);
+          }
+        }
+      }
+      in.close();
+    }
+    catch (FileNotFoundException e)
+    {
+      System.out.println("File " + filePath + " was not found");
+      e.printStackTrace();
+    }
+    catch (IOException e)
+    {
+      System.out.println("Error while reading in file");
+      e.printStackTrace();
+    }
+  }
+  
+  public static VocWord getVocWordFromString(String word)
+  {
+    for (VocWord vw : ) {
+      if (vw.word.compareTo(word) == 0) {
+        return vw;
+      }
+    }
+    return null;
+  }
+}

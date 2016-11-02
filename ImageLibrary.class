@@ -1,0 +1,131 @@
+package services;
+
+import java.awt.Image;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
+import model.Category;
+import model.VocImage;
+import model.VocWord;
+
+public class ImageLibrary
+{
+  private static final HashMap<String, ImageIcon> imageLibrary = new HashMap();
+  private static ArrayList<ImageIcon> rewardImages = new ArrayList();
+  private static ArrayList<ImageIcon> pretestIntroImages = new ArrayList();
+  private static ArrayList<ImageIcon> ratingTestIntroImages = new ArrayList();
+  private static String loadingImageError = "";
+  
+  public static ImageIcon getImageFromVocImage(VocImage vocImage, int width, int height)
+  {
+    if (imageLibrary.containsKey(vocImage.path)) {
+      return resizeImage((ImageIcon)imageLibrary.get(vocImage.path), width, height);
+    }
+    return new ImageIcon();
+  }
+  
+  public static String loadImages()
+  {
+    loadingImageError = "";
+    
+    Path currentRelativePath = Paths.get("", new String[0]);
+    String path = currentRelativePath.toAbsolutePath().toString();
+    Iterator localIterator2;
+    for (Iterator localIterator1 = WordLibrary.getCategories().iterator(); localIterator1.hasNext(); localIterator2.hasNext())
+    {
+      Category category = (Category)localIterator1.next();
+      String filePath = path + "\\" + category.name.replaceAll("\\s", "") + "\\";
+      localIterator2 = category.words.iterator(); continue;VocWord word = (VocWord)localIterator2.next();
+      for (VocImage image : word.getImages()) {
+        if (!imageLibrary.containsKey(image.path))
+        {
+          ImageIcon img = loadImage(filePath + word.fileWord + "\\" + image.path, image.path);
+          if (img != null) {
+            imageLibrary.put(image.path, img);
+          }
+        }
+      }
+    }
+    for (int x = 1; x <= 5; x++)
+    {
+      System.out.println(path + "\\Rewards\\Reward_" + x + ".jpg");
+      ImageIcon img = loadImage(path + "\\Rewards\\Reward_" + x + ".jpg", "Reward_" + x + ".jpg");
+      rewardImages.add(img);
+    }
+    for (int x = 1; x <= 4; x++)
+    {
+      ImageIcon img = loadImage(path + "\\Ratings\\Ratings" + x + ".jpg", "Ratings" + x + ".jpg");
+      ratingTestIntroImages.add(img);
+    }
+    String[] pretestIntroWords = { "Dog", "Lipstick", "Phone" };
+    for (int x = 0; x < pretestIntroWords.length; x++)
+    {
+      ImageIcon img = loadImage(path + "\\Training\\" + pretestIntroWords[x] + "\\" + pretestIntroWords[x] + "_Correct.jpg", pretestIntroWords[x] + "_Correct.jpg");
+      pretestIntroImages.add(img);
+      img = loadImage(path + "\\Training\\" + pretestIntroWords[x] + "\\" + pretestIntroWords[x] + "_Incorrect1.jpg", pretestIntroWords[x] + "_Incorrect1.jpg");
+      pretestIntroImages.add(img);
+      img = loadImage(path + "\\Training\\" + pretestIntroWords[x] + "\\" + pretestIntroWords[x] + "_Incorrect2.jpg", pretestIntroWords[x] + "_Incorrect2.jpg");
+      pretestIntroImages.add(img);
+      img = loadImage(path + "\\Training\\" + pretestIntroWords[x] + "\\" + pretestIntroWords[x] + "_Incorrect3.jpg", pretestIntroWords[x] + "_Incorrect3.jpg");
+      pretestIntroImages.add(img);
+    }
+    return loadingImageError;
+  }
+  
+  private static ImageIcon loadImage(String filePath, String endPath)
+  {
+    BufferedImage img = null;
+    try
+    {
+      img = ImageIO.read(new File(filePath));
+    }
+    catch (IOException e)
+    {
+      if (loadingImageError.isEmpty()) {
+        loadingImageError += "These image(s) weren't found: \n";
+      }
+      loadingImageError = loadingImageError + filePath + "\n";
+    }
+    if (img != null) {
+      return new ImageIcon(img);
+    }
+    return new ImageIcon();
+  }
+  
+  public static ImageIcon resizeImage(ImageIcon imageIcon, int width, int height)
+  {
+    Image image = imageIcon.getImage();
+    
+    Image newimg = image.getScaledInstance(width - 15, height - 15, 4);
+    
+    return new ImageIcon(newimg);
+  }
+  
+  public static ImageIcon getRandomRewardImage()
+  {
+    if (rewardImages.size() == 1) {
+      return (ImageIcon)rewardImages.get(0);
+    }
+    Collections.shuffle(rewardImages);
+    return (ImageIcon)rewardImages.remove(0);
+  }
+  
+  public static ArrayList<ImageIcon> getPretestIntroImages()
+  {
+    return new ArrayList(pretestIntroImages);
+  }
+  
+  public static ArrayList<ImageIcon> getRatingTestIntroImages()
+  {
+    return new ArrayList(ratingTestIntroImages);
+  }
+}

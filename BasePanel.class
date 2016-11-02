@@ -1,0 +1,14 @@
+package view;
+
+import javax.swing.JPanel;
+
+abstract class BasePanel
+  extends JPanel
+{
+  protected DefaultFrame baseFrame;
+  
+  public BasePanel(DefaultFrame frame)
+  {
+    this.baseFrame = frame;
+  }
+}

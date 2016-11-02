@@ -1,0 +1,103 @@
+package model;
+
+import java.util.ArrayList;
+import java.util.Collections;
+
+public class VocWord
+{
+  public final String word;
+  public final String fileWord;
+  private ArrayList<VocImage> images = new ArrayList();
+  private ArrayList<VocImage> reservedImages = new ArrayList();
+  private ArrayList<VocImage> trainingImages = new ArrayList();
+  private ArrayList<VocImage> miscImages = new ArrayList();
+  public boolean isTraining = false;
+  private boolean isHighVariability = false;
+  
+  public VocWord(String word)
+  {
+    this.word = word;
+    this.fileWord = word.replaceAll("\\s", "");
+    initiateFilePaths();
+  }
+  
+  private void initiateFilePaths()
+  {
+    this.images.add(new VocImage(this.word, this.fileWord + "_Bad" + ".jpg", "incorrect"));
+    this.images.add(new VocImage(this.word, this.fileWord + "_Moderate" + ".jpg", "moderate"));
+    for (int x = 1; x <= 13; x++) {
+      this.images.add(new VocImage(this.word, this.fileWord + "_Good_" + x + ".jpg", "accurate"));
+    }
+  }
+  
+  public ArrayList<VocImage> getImages()
+  {
+    return this.images;
+  }
+  
+  public VocImage getBadImagePath()
+  {
+    return (VocImage)this.images.get(0);
+  }
+  
+  public VocImage getModerateImagePath()
+  {
+    return (VocImage)this.images.get(1);
+  }
+  
+  public ArrayList<VocImage> getGoodImagePaths()
+  {
+    return new ArrayList(this.images.subList(2, this.images.size()));
+  }
+  
+  public ArrayList<VocImage> getReservedImages()
+  {
+    return new ArrayList(this.reservedImages);
+  }
+  
+  public ArrayList<VocImage> getTrainingImages()
+  {
+    return this.trainingImages;
+  }
+  
+  public void assignImages(boolean highVariability)
+  {
+    this.isHighVariability = highVariability;
+    ArrayList<VocImage> temp = getGoodImagePaths();
+    Collections.shuffle(temp);
+    int imageIndex = 0;
+    for (int x = 0; x < 10; x++)
+    {
+      this.trainingImages.add((VocImage)temp.get(imageIndex));
+      if (highVariability) {
+        imageIndex++;
+      }
+    }
+    if (!highVariability) {
+      imageIndex++;
+    }
+    for (int x = 0; x < 3; x++)
+    {
+      this.reservedImages.add((VocImage)temp.get(imageIndex));
+      imageIndex++;
+    }
+    while (imageIndex < temp.size())
+    {
+      this.miscImages.add((VocImage)temp.get(imageIndex));
+      imageIndex++;
+    }
+  }
+  
+  public ArrayList<VocImage> getMiscImages()
+  {
+    return this.miscImages;
+  }
+  
+  public String isHighVariabiliy()
+  {
+    if (this.isTraining) {
+      return this.isHighVariability ? "High" : "Low";
+    }
+    return "";
+  }
+}

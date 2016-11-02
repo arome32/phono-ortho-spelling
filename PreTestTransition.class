@@ -1,0 +1,52 @@
+package view;
+
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+
+public class PreTestTransition
+  extends BasePanel
+{
+  public PreTestTransition(DefaultFrame frame)
+  {
+    super(frame);
+    setLayout(null);
+    createContinueButton();
+    createlblTitle();
+  }
+  
+  private void createContinueButton()
+  {
+    JButton btnContinue = new JButton("Start Pretest");
+    btnContinue.addActionListener(new ActionListener()
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        PreTestTransition.this.startPreTest();
+      }
+    });
+    btnContinue.setSize((int)(this.baseFrame.xSize * 0.15D), (int)(this.baseFrame.ySize * 0.05D));
+    btnContinue.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * btnContinue.getSize().getWidth()), (int)(this.baseFrame.ySize * 0.5D));
+    add(btnContinue);
+  }
+  
+  private void createlblTitle()
+  {
+    JLabel lblTitle = new JLabel("Real Pretest");
+    Font labelFont = lblTitle.getFont();
+    lblTitle.setFont(new Font(labelFont.getName(), 0, 48));
+    lblTitle.setHorizontalAlignment(0);
+    lblTitle.setSize((int)(this.baseFrame.xSize * 0.9D), (int)(this.baseFrame.ySize * 0.1D));
+    lblTitle.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * lblTitle.getSize().getWidth()), 10);
+    
+    add(lblTitle);
+  }
+  
+  private void startPreTest()
+  {
+    this.baseFrame.start("ImagePreTest", this);
+  }
+}

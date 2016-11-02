@@ -1,0 +1,16 @@
+package model;
+
+import java.util.ArrayList;
+
+public class Category
+{
+  public String name;
+  public ArrayList<VocWord> words;
+  public int remainingAllowedTrainingWords;
+  
+  public Category(String name)
+  {
+    this.name = name;
+    this.words = new ArrayList();
+  }
+}

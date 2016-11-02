@@ -1,0 +1,78 @@
+package view;
+
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.sound.sampled.LineEvent;
+import javax.sound.sampled.LineEvent.Type;
+import javax.sound.sampled.LineListener;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import services.AudioPlayer;
+
+public class PostTestWeirdTransition
+  extends BasePanel
+{
+  JButton btnContinue;
+  LineListener listener;
+  
+  public PostTestWeirdTransition(DefaultFrame frame)
+  {
+    super(frame);
+    setLayout(null);
+    createContinueButton();
+    createlblTitle();
+    playInstructions("ratings6.wav");
+  }
+  
+  private void createContinueButton()
+  {
+    this.btnContinue = new JButton("Start Test");
+    this.btnContinue.setEnabled(false);
+    this.btnContinue.addActionListener(new ActionListener()
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        PostTestWeirdTransition.this.startPostTest();
+      }
+    });
+    this.btnContinue.setSize((int)(this.baseFrame.xSize * 0.15D), (int)(this.baseFrame.ySize * 0.05D));
+    this.btnContinue.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * this.btnContinue.getSize().getWidth()), (int)(this.baseFrame.ySize * 0.5D));
+    add(this.btnContinue);
+  }
+  
+  private void playInstructions(String audioPath)
+  {
+    if (!audioPath.isEmpty())
+    {
+      this.listener = new LineListener()
+      {
+        public void update(LineEvent event)
+        {
+          if (event.getType() == LineEvent.Type.STOP) {
+            PostTestWeirdTransition.this.btnContinue.setEnabled(true);
+          }
+        }
+      };
+      AudioPlayer.playAudioFileFromPath(audioPath, this.listener);
+    }
+  }
+  
+  private void createlblTitle()
+  {
+    JLabel lblTitle = new JLabel("Real Rating Test");
+    Font labelFont = lblTitle.getFont();
+    lblTitle.setFont(new Font(labelFont.getName(), 0, 48));
+    lblTitle.setHorizontalAlignment(0);
+    lblTitle.setSize((int)(this.baseFrame.xSize * 0.9D), (int)(this.baseFrame.ySize * 0.1D));
+    lblTitle.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * lblTitle.getSize().getWidth()), 10);
+    
+    add(lblTitle);
+  }
+  
+  private void startPostTest()
+  {
+    this.baseFrame.start("ImagePostTestWeird", this);
+  }
+}

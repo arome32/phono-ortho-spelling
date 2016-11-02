@@ -1,0 +1,83 @@
+package services;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import model.Session;
+import model.VocWord;
+
+public class OutputManager
+{
+  private static File desktop;
+  private static File savedTraining;
+  
+  public static String getTime()
+  {
+    String time = "";
+    Calendar cal = Calendar.getInstance();
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd");
+    time = time + sdf.format(cal.getTime());
+    sdf = new SimpleDateFormat("HH:mm:ss");
+    time = time + " " + sdf.format(cal.getTime());
+    return time;
+  }
+  
+  public static void chooseFile()
+  {
+    String fileEnding = Session.trainingRecords.size() == 0 ? "pretestoutput" : "posttestoutput";
+    int fileCount = 1;
+    while (new File(System.getProperty("user.home"), "\\Desktop\\" + Session.examiner + "_" + Session.participantCode + "_" + fileEnding + "_" + fileCount + ".csv").exists()) {
+      fileCount++;
+    }
+    desktop = new File(System.getProperty("user.home"), 
+      "\\Desktop\\" + Session.participantCode + "_" + fileEnding + "_" + fileCount + ".csv");
+  }
+  
+  public static void writeOutput()
+  {
+    chooseFile();
+    write(desktop, Session.getOutput());
+  }
+  
+  private static void write(File file, String output)
+  {
+    String out = Session.participantCode + "," + Session.examiner + "," + "pretest" + "," + getTime() + "\n";
+    for (VocWord vw : Session.getTrainingWords()) {
+      out = out + vw.word + "\n";
+    }
+    try
+    {
+      FileWriter writer = new FileWriter(file);
+      writer.append(output);
+      writer.flush();
+      writer.close();
+    }
+    catch (IOException e)
+    {
+      e.printStackTrace();
+    }
+  }
+  
+  public static void saveTrainingWords()
+  {
+    chooseTrainingWordFile();
+    write(savedTraining, Session.getTrainingWordsAsCommaString());
+  }
+  
+  public static void chooseTrainingWordFile()
+  {
+    Path currentRelativePath = Paths.get("", new String[0]);
+    String path = currentRelativePath.toAbsolutePath().toString();
+    int fileCount = 1;
+    while (new File(System.getProperty("user.home"), "\\Desktop\\" + Session.participantCode + "_trainingwords" + fileCount + ".txt").exists()) {
+      fileCount++;
+    }
+    savedTraining = new File(System.getProperty("user.home"), "\\Desktop\\" + 
+      Session.participantCode + "_trainingwords" + fileCount + ".txt");
+  }
+}

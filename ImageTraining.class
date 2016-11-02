@@ -1,0 +1,199 @@
+package view;
+
+import java.awt.Dimension;
+import java.awt.Font;
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
+import javax.swing.ImageIcon;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import model.Record;
+import model.Session;
+import model.VocImage;
+import model.VocWord;
+import services.ImageLibrary;
+import services.WordLibrary;
+
+public class ImageTraining
+  extends BasePanel
+{
+  JLabel lblWord;
+  JLabel lblImg;
+  private ArrayList<VocWord> trainingWords = new ArrayList(Session.getTrainingWords());
+  private ArrayList<VocImage> images = new ArrayList();
+  Timer timer = new Timer();
+  private int imageIndex = 0;
+  
+  public ImageTraining(DefaultFrame frame)
+  {
+    super(frame);
+    System.out.println("");
+    System.out.println("");
+    System.out.println("TrainingWOrds: " + this.trainingWords.size());
+    for (int x = 0; x < this.trainingWords.size(); x++)
+    {
+      System.out.println(((VocWord)this.trainingWords.get(x)).word);
+      if (x < this.trainingWords.size() / 2) {
+        ((VocWord)this.trainingWords.get(x)).assignImages(true);
+      } else {
+        ((VocWord)this.trainingWords.get(x)).assignImages(false);
+      }
+    }
+    instantiatePanel();
+  }
+  
+  private void instantiatePanel()
+  {
+    setLayout(null);
+    createlblWord();
+    createlblImage();
+    pickImages();
+    Collections.shuffle(this.images);
+  }
+  
+  private void pickImages()
+  {
+    for (VocWord vocWord : this.trainingWords) {
+      this.images.addAll(vocWord.getTrainingImages());
+    }
+    for (VocImage vocImage : this.images) {
+      Session.trainingImagePaths.add(vocImage.path);
+    }
+  }
+  
+  public void start()
+  {
+    cycle();
+  }
+  
+  public void cycle()
+  {
+    populateView();
+    System.out.println(((VocImage)this.images.get(this.imageIndex)).word);
+    this.imageIndex += 1;
+    System.out.println(this.imageIndex);
+    this.timer.schedule(new TimerTask()
+    {
+      public void run()
+      {
+        ImageTraining.this.showDelay();
+      }
+    }, Session.trainingSpeed * 1000);
+  }
+  
+  private void progressInput()
+  {
+    if (this.imageIndex > this.images.size() - 1) {
+      finish();
+    } else if ((this.imageIndex + 1) % 27 == 0) {
+      showInterrupt();
+    } else {
+      cycle();
+    }
+  }
+  
+  private void progressInputAfterInterrupt()
+  {
+    if (this.imageIndex > this.images.size() - 1) {
+      finish();
+    } else {
+      cycle();
+    }
+  }
+  
+  private void showInterrupt()
+  {
+    JOptionPane.showMessageDialog(null, "Are you still there?");
+    this.lblWord.setText("yay!");
+    this.lblImg.setIcon(ImageLibrary.resizeImage(ImageLibrary.getRandomRewardImage(), this.lblImg.getSize().width, 
+      this.lblImg.getSize().height));
+    revalidate();
+    this.timer.schedule(new TimerTask()
+    {
+      public void run()
+      {
+        ImageTraining.this.showDelayAfterInterrupt();
+      }
+    }, 3000L);
+  }
+  
+  private void showDelay()
+  {
+    this.lblWord.setText("");
+    this.lblImg.setIcon(new ImageIcon());
+    revalidate();
+    this.timer.schedule(new TimerTask()
+    {
+      public void run()
+      {
+        ImageTraining.this.progressInput();
+      }
+    }, 100L);
+  }
+  
+  private void showDelayAfterInterrupt()
+  {
+    this.lblWord.setText("");
+    this.lblImg.setIcon(new ImageIcon());
+    revalidate();
+    this.timer.schedule(new TimerTask()
+    {
+      public void run()
+      {
+        ImageTraining.this.progressInputAfterInterrupt();
+      }
+    }, 100L);
+  }
+  
+  private void populateView()
+  {
+    if (this.imageIndex < this.images.size())
+    {
+      this.lblWord.setText(((VocImage)this.images.get(this.imageIndex)).word);
+      this.lblImg.setIcon(ImageLibrary.getImageFromVocImage((VocImage)this.images.get(this.imageIndex), this.lblImg.getSize().width, 
+        this.lblImg.getSize().height));
+      revalidate();
+    }
+  }
+  
+  private void createlblWord()
+  {
+    this.lblWord = new JLabel("adsf");
+    Font labelFont = this.lblWord.getFont();
+    this.lblWord.setFont(new Font(labelFont.getName(), 0, 48));
+    this.lblWord.setHorizontalAlignment(0);
+    this.lblWord.setSize((int)(this.baseFrame.xSize * 0.9D), (int)(this.baseFrame.ySize * 0.1D));
+    this.lblWord.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * this.lblWord.getSize().getWidth()), 10);
+    
+    add(this.lblWord);
+  }
+  
+  private void createlblImage()
+  {
+    this.lblImg = new JLabel();
+    this.lblImg.setSize((int)(this.baseFrame.xSize * 0.65D), (int)(this.baseFrame.ySize * 0.6D));
+    this.lblImg.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * this.lblImg.getSize().getWidth()), (int)(this.baseFrame.ySize * 0.1D));
+    add(this.lblImg);
+  }
+  
+  private void finish()
+  {
+    for (VocImage vi : this.images)
+    {
+      Record trainingRecord = new Record();
+      trainingRecord.images = vi.path;
+      trainingRecord.variability = WordLibrary.getVocWordFromString(vi.word).isHighVariabiliy();
+      saveRecord(trainingRecord);
+    }
+    this.baseFrame.showInstructions("ImagePostTest", this);
+  }
+  
+  public void saveRecord(Record recordToSave)
+  {
+    Session.trainingRecords.add(recordToSave);
+  }
+}

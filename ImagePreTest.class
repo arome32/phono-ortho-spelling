@@ -1,0 +1,228 @@
+package view;
+
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.Random;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import model.Record;
+import model.Session;
+import model.VocImage;
+import model.VocWord;
+import services.ImageLibrary;
+import services.WordLibrary;
+
+public class ImagePreTest
+  extends BasePanel
+{
+  JButton btnUpLeft;
+  JButton btnUpRight;
+  JButton btnDownLeft;
+  JButton btnDownRight;
+  JLabel lblWord;
+  JPanel panel = new JPanel();
+  private ArrayList<VocWord> words = new ArrayList(WordLibrary.getAllWords());
+  private int wordIndex = -1;
+  private Random random;
+  private ArrayList<VocImage> currentImages;
+  private ArrayList<VocWord> currentWords;
+  
+  public ImagePreTest(DefaultFrame frame)
+  {
+    super(frame);
+    
+    Session.clearTrainingWords();
+    System.out.println("ImagePreTest words");
+    for (VocWord vw : this.words) {
+      System.out.println(vw.word);
+    }
+    this.random = new Random();
+  }
+  
+  public void start()
+  {
+    instantiatePanel();
+    Collections.shuffle(this.words);
+    cycleWord();
+  }
+  
+  private void cycleWord()
+  {
+    this.wordIndex += 1;
+    populateView();
+  }
+  
+  private void checkAnswer(String word)
+  {
+    Record preTestRecord = new Record();
+    preTestRecord.selected = word;
+    preTestRecord.answer = ((VocWord)this.words.get(this.wordIndex)).word;
+    if (word.compareTo(((VocWord)this.words.get(this.wordIndex)).word) != 0)
+    {
+      preTestRecord.correct = "0";
+      Session.addTrainingWords((VocWord)this.words.get(this.wordIndex));
+    }
+    else
+    {
+      preTestRecord.correct = "1";
+    }
+    VocWord vw;
+    for (Iterator localIterator = this.currentWords.iterator(); localIterator.hasNext(); tmp114_113.words = (tmp114_113.words + vw.word + " : ")) {
+      vw = (VocWord)localIterator.next();
+    }
+    VocImage vi;
+    for (localIterator = this.currentImages.iterator(); localIterator.hasNext(); tmp181_180.images = (tmp181_180.images + vi.path + " : ")) {
+      vi = (VocImage)localIterator.next();
+    }
+    saveRecord(preTestRecord);
+    if ((Session.getTrainingWords().size() == 16) || (this.wordIndex >= this.words.size() - 1) || 
+      (Session.getTrainingWords().size() + this.words.size() - 1 - this.wordIndex < 12)) {
+      finish();
+    } else {
+      cycleWord();
+    }
+  }
+  
+  private void populateView()
+  {
+    this.lblWord.setText(((VocWord)this.words.get(this.wordIndex)).word);
+    ArrayList<VocImage> goodImages = ((VocWord)this.words.get(this.wordIndex)).getGoodImagePaths();
+    Collections.shuffle(goodImages);
+    this.currentWords = new ArrayList();
+    this.currentWords.add((VocWord)this.words.get(this.wordIndex));
+    this.currentImages = new ArrayList();
+    this.currentImages.add((VocImage)goodImages.get(0));
+    for (int x = 0; x < 3; x++)
+    {
+      int randomWordIndex = this.random.nextInt(this.words.size());
+      while (this.currentWords.contains(this.words.get(randomWordIndex))) {
+        randomWordIndex = this.random.nextInt(this.words.size());
+      }
+      this.currentWords.add((VocWord)this.words.get(randomWordIndex));
+      int randomImgIndex = this.random.nextInt(((VocWord)this.words.get(randomWordIndex)).getGoodImagePaths().size());
+      this.currentImages.add((VocImage)((VocWord)this.words.get(randomWordIndex)).getGoodImagePaths().get(randomImgIndex));
+    }
+    Collections.shuffle(this.currentImages);
+    
+    this.btnUpLeft.setIcon(ImageLibrary.getImageFromVocImage((VocImage)this.currentImages.get(0), (int)(this.panel.getSize().width * 0.5D), 
+      (int)(this.panel.getSize().height * 0.5D)));
+    this.btnUpLeft.setActionCommand(((VocImage)this.currentImages.get(0)).word);
+    this.btnUpRight.setIcon(ImageLibrary.getImageFromVocImage((VocImage)this.currentImages.get(1), (int)(this.panel.getSize().width * 0.5D), 
+      (int)(this.panel.getSize().height * 0.5D)));
+    this.btnUpRight.setActionCommand(((VocImage)this.currentImages.get(1)).word);
+    this.btnDownLeft.setIcon(ImageLibrary.getImageFromVocImage((VocImage)this.currentImages.get(2), (int)(this.panel.getSize().width * 0.5D), 
+      (int)(this.panel.getSize().height * 0.5D)));
+    this.btnDownLeft.setActionCommand(((VocImage)this.currentImages.get(2)).word);
+    this.btnDownRight.setIcon(ImageLibrary.getImageFromVocImage((VocImage)this.currentImages.get(3), (int)(this.panel.getSize().width * 0.5D), 
+      (int)(this.panel.getSize().height * 0.5D)));
+    this.btnDownRight.setActionCommand(((VocImage)this.currentImages.get(3)).word);
+  }
+  
+  private void finish()
+  {
+    int trainingSize = Session.getTrainingWords().size();
+    if (trainingSize >= 12) {
+      while ((trainingSize % 2 != 0) && (trainingSize > 12))
+      {
+        Session.trainingWords.remove(trainingSize - 1);
+        trainingSize = Session.getTrainingWords().size();
+      }
+    }
+    this.baseFrame.showTrainingMenu(this);
+  }
+  
+  private void instantiatePanel()
+  {
+    setLayout(null);
+    createImgButtons();
+    createlblWord();
+  }
+  
+  private void createlblWord()
+  {
+    this.lblWord = new JLabel("adsf");
+    Font labelFont = this.lblWord.getFont();
+    this.lblWord.setFont(new Font(labelFont.getName(), 0, 48));
+    this.lblWord.setHorizontalAlignment(0);
+    this.lblWord.setSize((int)(this.baseFrame.xSize * 0.9D), (int)(this.baseFrame.ySize * 0.1D));
+    this.lblWord.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * this.lblWord.getSize().getWidth()), 10);
+    add(this.lblWord);
+  }
+  
+  private void createImgButtons()
+  {
+    this.panel.setLayout(new GridLayout(2, 2, 20, 20));
+    this.panel.setSize((int)(this.baseFrame.xSize * 0.75D), (int)(this.baseFrame.ySize * 0.8D));
+    this.panel.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * this.panel.getSize().getWidth()), (int)(this.baseFrame.ySize * 0.1D));
+    createBtnUpLeft();
+    createBtnUpRight();
+    createBtnDownLeft();
+    createBtnDownRight();
+    this.panel.add(this.btnUpLeft);
+    this.panel.add(this.btnUpRight);
+    this.panel.add(this.btnDownLeft);
+    this.panel.add(this.btnDownRight);
+    add(this.panel);
+  }
+  
+  private void createBtnUpLeft()
+  {
+    this.btnUpLeft = new JButton();
+    this.btnUpLeft.addActionListener(new ActionListener()
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        ImagePreTest.this.checkAnswer(ImagePreTest.this.btnUpLeft.getActionCommand());
+      }
+    });
+  }
+  
+  private void createBtnUpRight()
+  {
+    this.btnUpRight = new JButton();
+    this.btnUpRight.addActionListener(new ActionListener()
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        ImagePreTest.this.checkAnswer(ImagePreTest.this.btnUpRight.getActionCommand());
+      }
+    });
+  }
+  
+  private void createBtnDownLeft()
+  {
+    this.btnDownLeft = new JButton();
+    this.btnDownLeft.addActionListener(new ActionListener()
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        ImagePreTest.this.checkAnswer(ImagePreTest.this.btnDownLeft.getActionCommand());
+      }
+    });
+  }
+  
+  private void createBtnDownRight()
+  {
+    this.btnDownRight = new JButton();
+    this.btnDownRight.addActionListener(new ActionListener()
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        ImagePreTest.this.checkAnswer(ImagePreTest.this.btnDownRight.getActionCommand());
+      }
+    });
+  }
+  
+  public void saveRecord(Record recordToSave)
+  {
+    Session.preTestRecords.add(recordToSave);
+  }
+}

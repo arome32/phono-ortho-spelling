@@ -1,0 +1,186 @@
+package view;
+
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.awt.Image;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Random;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import services.ImageLibrary;
+
+public class ImageIntroTest
+  extends BasePanel
+{
+  JButton btnUpLeft;
+  JButton btnUpRight;
+  JButton btnDownLeft;
+  JButton btnDownRight;
+  JLabel lblWord;
+  JPanel panel = new JPanel();
+  private int practiceRound = -1;
+  private Random random;
+  private ArrayList<ImageIcon> images = ImageLibrary.getPretestIntroImages();
+  private String[] words = { "Dog", "Lipstick", "Phone" };
+  private ArrayList<ImageIcon> currentImages;
+  private ArrayList<JButton> buttons = new ArrayList();
+  
+  public ImageIntroTest(DefaultFrame frame)
+  {
+    super(frame);
+  }
+  
+  public void start()
+  {
+    instantiatePanel();
+    cycleWord();
+  }
+  
+  private void cycleWord()
+  {
+    this.practiceRound += 1;
+    populateView();
+  }
+  
+  private void checkAnswer(String verdict)
+  {
+    if (verdict.compareTo("correct") == 0)
+    {
+      if (this.practiceRound > 1) {
+        finish();
+      } else {
+        cycleWord();
+      }
+    }
+    else {
+      JOptionPane.showMessageDialog(null, "Try again.");
+    }
+  }
+  
+  private void populateView()
+  {
+    this.lblWord.setText(this.words[this.practiceRound]);
+    this.currentImages = new ArrayList();
+    for (int i = 0; i < 4; i++) {}
+    Collections.shuffle(this.buttons);
+    int i = 0;
+    for (JButton button : this.buttons)
+    {
+      if (i == 0) {
+        button.setActionCommand("correct");
+      } else {
+        button.setActionCommand("incorrect");
+      }
+      button.setIcon(resizeImage((ImageIcon)this.images.get(i + this.practiceRound * 4), (int)(this.panel.getSize().width * 0.5D), 
+        (int)(this.panel.getSize().height * 0.5D)));
+      i++;
+    }
+  }
+  
+  private void instantiatePanel()
+  {
+    setLayout(null);
+    createImgButtons();
+    createlblWord();
+  }
+  
+  private void createlblWord()
+  {
+    this.lblWord = new JLabel("adsf");
+    Font labelFont = this.lblWord.getFont();
+    this.lblWord.setFont(new Font(labelFont.getName(), 0, 48));
+    this.lblWord.setHorizontalAlignment(0);
+    this.lblWord.setSize((int)(this.baseFrame.xSize * 0.9D), (int)(this.baseFrame.ySize * 0.1D));
+    this.lblWord.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * this.lblWord.getSize().getWidth()), 10);
+    add(this.lblWord);
+  }
+  
+  private void createImgButtons()
+  {
+    this.panel.setLayout(new GridLayout(2, 2, 20, 20));
+    this.panel.setSize((int)(this.baseFrame.xSize * 0.75D), (int)(this.baseFrame.ySize * 0.8D));
+    this.panel.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * this.panel.getSize().getWidth()), (int)(this.baseFrame.ySize * 0.1D));
+    createBtnUpLeft();
+    createBtnUpRight();
+    createBtnDownLeft();
+    createBtnDownRight();
+    this.panel.add(this.btnUpLeft);
+    this.panel.add(this.btnUpRight);
+    this.panel.add(this.btnDownLeft);
+    this.panel.add(this.btnDownRight);
+    add(this.panel);
+  }
+  
+  private void createBtnUpLeft()
+  {
+    this.btnUpLeft = new JButton();
+    this.btnUpLeft.addActionListener(new ActionListener()
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        ImageIntroTest.this.checkAnswer(ImageIntroTest.this.btnUpLeft.getActionCommand());
+      }
+    });
+    this.buttons.add(this.btnUpLeft);
+  }
+  
+  private void createBtnUpRight()
+  {
+    this.btnUpRight = new JButton();
+    this.btnUpRight.addActionListener(new ActionListener()
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        ImageIntroTest.this.checkAnswer(ImageIntroTest.this.btnUpRight.getActionCommand());
+      }
+    });
+    this.buttons.add(this.btnUpRight);
+  }
+  
+  private void createBtnDownLeft()
+  {
+    this.btnDownLeft = new JButton();
+    this.btnDownLeft.addActionListener(new ActionListener()
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        ImageIntroTest.this.checkAnswer(ImageIntroTest.this.btnDownLeft.getActionCommand());
+      }
+    });
+    this.buttons.add(this.btnDownLeft);
+  }
+  
+  private void createBtnDownRight()
+  {
+    this.btnDownRight = new JButton();
+    this.btnDownRight.addActionListener(new ActionListener()
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        ImageIntroTest.this.checkAnswer(ImageIntroTest.this.btnDownRight.getActionCommand());
+      }
+    });
+    this.buttons.add(this.btnDownRight);
+  }
+  
+  private void finish()
+  {
+    this.baseFrame.showInstructions("PreTestTransition", this);
+  }
+  
+  public static ImageIcon resizeImage(ImageIcon imageIcon, int width, int height)
+  {
+    Image image = imageIcon.getImage();
+    
+    Image newimg = image.getScaledInstance(width - 15, height - 15, 4);
+    
+    return new ImageIcon(newimg);
+  }
+}

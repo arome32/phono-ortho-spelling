@@ -1,0 +1,8 @@
+package view;
+
+public abstract interface StagePanel
+{
+  public abstract void showInstructions();
+  
+  public abstract void start();
+}

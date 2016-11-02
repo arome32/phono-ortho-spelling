@@ -1,0 +1,15 @@
+package model;
+
+public class VocImage
+{
+  public final String word;
+  public final String path;
+  public final String type;
+  
+  public VocImage(String word, String path, String type)
+  {
+    this.word = word;
+    this.path = path;
+    this.type = type;
+  }
+}

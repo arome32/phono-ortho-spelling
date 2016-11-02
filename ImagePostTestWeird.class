@@ -1,0 +1,202 @@
+package view;
+
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
+import javax.swing.AbstractButton;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import model.Record;
+import model.Session;
+import model.VocImage;
+import model.VocWord;
+import services.ImageLibrary;
+import services.WordLibrary;
+
+public class ImagePostTestWeird
+  extends BasePanel
+{
+  ButtonGroup btnGroup = new ButtonGroup();
+  JLabel lblWord;
+  JLabel lblImg;
+  ArrayList<VocImage> images = new ArrayList();
+  private int imageIndex = 0;
+  
+  public ImagePostTestWeird(DefaultFrame frame)
+  {
+    super(frame);
+    instantiatePanel();
+  }
+  
+  private void instantiatePanel()
+  {
+    setLayout(null);
+    createBtnOk();
+    createBtnRatings();
+    createlblWord();
+    createlblImage();
+  }
+  
+  public void start()
+  {
+    chooseImages();
+    cycle();
+  }
+  
+  private void cycle()
+  {
+    populateView();
+  }
+  
+  private void chooseImages()
+  {
+    ArrayList<VocWord> trainedWords = Session.getTrainingWords();
+    for (VocWord vw : trainedWords)
+    {
+      this.images.add(vw.getModerateImagePath());
+      this.images.add(vw.getBadImagePath());
+      this.images.add((VocImage)vw.getReservedImages().get(1));
+      this.images.add((VocImage)vw.getReservedImages().get(2));
+    }
+    Collections.shuffle(this.images);
+  }
+  
+  private void populateView()
+  {
+    if (this.imageIndex < this.images.size())
+    {
+      this.lblWord.setText(((VocImage)this.images.get(this.imageIndex)).word);
+      this.lblImg.setIcon(ImageLibrary.getImageFromVocImage((VocImage)this.images.get(this.imageIndex), this.lblImg.getSize().width, 
+        this.lblImg.getSize().height));
+      revalidate();
+    }
+  }
+  
+  private void validateInput()
+  {
+    if (getSelectedButtonText() == null) {
+      JOptionPane.showMessageDialog(this, "Please select a rating.");
+    } else {
+      recordAnswer();
+    }
+  }
+  
+  private void createBtnOk()
+  {
+    JButton btnOk = new JButton("Ok");
+    btnOk.addActionListener(new ActionListener()
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        ImagePostTestWeird.this.validateInput();
+      }
+    });
+    btnOk.setSize((int)(this.baseFrame.xSize * 0.15D), (int)(this.baseFrame.ySize * 0.05D));
+    btnOk.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * btnOk.getSize().getWidth()), (int)(this.baseFrame.ySize * 0.85D));
+    add(btnOk);
+  }
+  
+  private void recordAnswer()
+  {
+    Record ratingRecord = new Record();
+    ratingRecord.rating = getSelectedButtonText();
+    ratingRecord.words = this.lblWord.getText();
+    ratingRecord.images = ((VocImage)this.images.get(this.imageIndex)).path;
+    ratingRecord.variability = WordLibrary.getVocWordFromString(this.lblWord.getText()).isHighVariabiliy();
+    ratingRecord.type = ((VocImage)this.images.get(this.imageIndex)).type;
+    saveRecord(ratingRecord);
+    if (this.imageIndex >= this.images.size() - 1)
+    {
+      this.baseFrame.finish(this);
+    }
+    else
+    {
+      this.btnGroup.clearSelection();
+      this.imageIndex += 1;
+      cycle();
+    }
+  }
+  
+  private void createlblWord()
+  {
+    this.lblWord = new JLabel("adsf");
+    Font labelFont = this.lblWord.getFont();
+    this.lblWord.setFont(new Font(labelFont.getName(), 0, 48));
+    this.lblWord.setHorizontalAlignment(0);
+    this.lblWord.setSize((int)(this.baseFrame.xSize * 0.9D), (int)(this.baseFrame.ySize * 0.1D));
+    this.lblWord.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * this.lblWord.getSize().getWidth()), 10);
+    add(this.lblWord);
+  }
+  
+  private void createlblImage()
+  {
+    this.lblImg = new JLabel("asdf");
+    this.lblImg.setSize((int)(this.baseFrame.xSize * 0.65D), (int)(this.baseFrame.ySize * 0.6D));
+    this.lblImg.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * this.lblImg.getSize().getWidth()), (int)(this.baseFrame.ySize * 0.1D));
+    add(this.lblImg);
+  }
+  
+  private void createBtnRatings()
+  {
+    JRadioButton btn1 = new JRadioButton("1");
+    JRadioButton btn2 = new JRadioButton("2");
+    JRadioButton btn3 = new JRadioButton("3");
+    JRadioButton btn4 = new JRadioButton("4");
+    JRadioButton btn5 = new JRadioButton("5");
+    JRadioButton btn6 = new JRadioButton("6");
+    JRadioButton btn7 = new JRadioButton("7");
+    JRadioButton btn8 = new JRadioButton("8");
+    JRadioButton btn9 = new JRadioButton("9");
+    
+    this.btnGroup.add(btn1);
+    this.btnGroup.add(btn2);
+    this.btnGroup.add(btn3);
+    this.btnGroup.add(btn4);
+    this.btnGroup.add(btn5);
+    this.btnGroup.add(btn6);
+    this.btnGroup.add(btn7);
+    this.btnGroup.add(btn8);
+    this.btnGroup.add(btn9);
+    
+    JPanel radioPanel = new JPanel();
+    radioPanel.setLayout(new GridLayout(1, 9, 5, 0));
+    radioPanel.add(btn1);
+    radioPanel.add(btn2);
+    radioPanel.add(btn3);
+    radioPanel.add(btn4);
+    radioPanel.add(btn5);
+    radioPanel.add(btn6);
+    radioPanel.add(btn7);
+    radioPanel.add(btn8);
+    radioPanel.add(btn9);
+    radioPanel.setSize((int)(this.baseFrame.xSize * 0.4D), (int)(this.baseFrame.ySize * 0.05D));
+    radioPanel.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * radioPanel.getSize().getWidth()), (int)(this.baseFrame.ySize * 0.8D));
+    add(radioPanel);
+  }
+  
+  public String getSelectedButtonText()
+  {
+    for (Enumeration<AbstractButton> buttons = this.btnGroup.getElements(); buttons.hasMoreElements();)
+    {
+      AbstractButton button = (AbstractButton)buttons.nextElement();
+      if (button.isSelected()) {
+        return button.getText();
+      }
+    }
+    return null;
+  }
+  
+  public void saveRecord(Record recordToSave)
+  {
+    Session.ratingRecords.add(recordToSave);
+  }
+}

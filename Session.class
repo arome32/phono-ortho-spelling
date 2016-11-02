@@ -1,0 +1,261 @@
+package model;
+
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
+import services.OutputManager;
+
+public class Session
+{
+  private static Session session;
+  public static String participantCode = "";
+  public static String examiner = "";
+  public static ArrayList<VocWord> trainingWords = new ArrayList();
+  private static String output = "";
+  public static ArrayList<Record> preTestRecords = new ArrayList();
+  public static ArrayList<Record> trainingRecords = new ArrayList();
+  public static ArrayList<Record> postTestRecords = new ArrayList();
+  public static ArrayList<Record> ratingRecords = new ArrayList();
+  public static Set<String> trainingImagePaths = new HashSet();
+  public static int trainingSpeed = 3;
+  
+  protected Session(String pC, String e)
+  {
+    participantCode = pC;
+    examiner = e;
+  }
+  
+  public static void createSession(String participantCode, String examiner)
+  {
+    if (session == null) {
+      session = new Session(participantCode, examiner);
+    }
+  }
+  
+  public static void deleteSession()
+  {
+    session = null;
+  }
+  
+  public static ArrayList<VocWord> getTrainingWords()
+  {
+    return new ArrayList(trainingWords);
+  }
+  
+  public static void addTrainingWords(VocWord word)
+  {
+    word.isTraining = true;
+    trainingWords.add(word);
+  }
+  
+  public static void addToOutput(String results)
+  {
+    output += results;
+    output += "\n";
+  }
+  
+  public static String getOutput()
+  {
+    createOutput();
+    return output;
+  }
+  
+  public static String getTrainingWordsAsString()
+  {
+    String tempOutput = "";
+    for (VocWord vw : trainingWords) {
+      tempOutput = tempOutput + vw.word + "\n";
+    }
+    return tempOutput;
+  }
+  
+  public static String getTrainingWordsAsCommaString()
+  {
+    String tempOutput = "";
+    for (VocWord vw : trainingWords) {
+      tempOutput = tempOutput + vw.word + ",";
+    }
+    return tempOutput;
+  }
+  
+  public static void saveTrainingWords()
+  {
+    if (trainingWords.size() > 0) {
+      OutputManager.saveTrainingWords();
+    }
+  }
+  
+  public static void clearTrainingWords()
+  {
+    trainingWords = new ArrayList();
+  }
+  
+  public static void createOutput()
+  {
+    addToOutput("");
+    addToOutput("Training Words");
+    addToOutput("");
+    String trainingWordsAsCommaString = new String(getTrainingWordsAsCommaString());
+    trainingWordsAsCommaString = trainingWordsAsCommaString.replace(',', '\n');
+    System.out.println(trainingWordsAsCommaString);
+    addToOutput(trainingWordsAsCommaString);
+    addToOutput("");
+    if (!preTestRecords.isEmpty())
+    {
+      addToOutput(
+        participantCode + "," + examiner + "," + "pretest" + "," + OutputManager.getTime());
+      addToOutput("Selected,Answer,Correct,Choice Words,Choice Images");
+      for (Record r : preTestRecords) {
+        addToOutput(r.selected + "," + r.answer + "," + r.correct + "," + r.words + "," + r.images);
+      }
+    }
+    addToOutput("");
+    if (!trainingRecords.isEmpty())
+    {
+      addToOutput(
+        participantCode + "," + examiner + "," + "training" + "," + OutputManager.getTime());
+      addToOutput("Stimuli Used,Variability");
+      for (Record r : trainingRecords) {
+        addToOutput(r.images + "," + r.variability);
+      }
+    }
+    addToOutput("");
+    if (!postTestRecords.isEmpty())
+    {
+      addToOutput(
+        participantCode + "," + examiner + "," + "posttest" + "," + OutputManager.getTime());
+      addToOutput("Selected,Answer,Correct,Choice Words,Choice Images,Training Word,Variability");
+      for (Record r : postTestRecords) {
+        addToOutput(
+          r.selected + "," + r.answer + "," + r.correct + "," + r.words + "," + r.images + "," + r.training + "," + r.variability);
+      }
+    }
+    addToOutput("");
+    if (!ratingRecords.isEmpty())
+    {
+      addToOutput(
+        participantCode + "," + examiner + "," + "weirdness" + "," + OutputManager.getTime());
+      addToOutput("Rating,Choice Word,Choice Image,Variability");
+      for (Record r : ratingRecords) {
+        addToOutput(r.rating + "," + r.words + "," + r.images + "," + r.variability + "," + r.type);
+      }
+    }
+    createSummary();
+  }
+  
+  private static void createSummary()
+  {
+    if (!postTestRecords.isEmpty())
+    {
+      addToOutput("");
+      addToOutput("Summary");
+      addToOutput("");
+      
+      addToOutput("Variability,# Correct,# correct trained,# correct generalized");
+      int highVariabilityCorrect = 0;
+      int lowVariabilityCorrect = 0;
+      int highVarTrainedCorrect = 0;
+      int lowVarTrainedCorrect = 0;
+      for (Record r : postTestRecords) {
+        if (r.correct.compareTo("1") == 0) {
+          if (r.variability.compareToIgnoreCase("High") == 0)
+          {
+            highVariabilityCorrect++;
+            if (r.training.compareToIgnoreCase("YES") == 0) {
+              highVarTrainedCorrect++;
+            }
+          }
+          else
+          {
+            lowVariabilityCorrect++;
+            if (r.training.compareToIgnoreCase("YES") == 0) {
+              lowVarTrainedCorrect++;
+            }
+          }
+        }
+      }
+      addToOutput("High," + highVariabilityCorrect + "," + highVarTrainedCorrect + "," + (highVariabilityCorrect - highVarTrainedCorrect));
+      addToOutput("Low," + lowVariabilityCorrect + "," + lowVarTrainedCorrect + "," + (lowVariabilityCorrect - lowVarTrainedCorrect));
+    }
+    if (!ratingRecords.isEmpty())
+    {
+      addToOutput("");
+      addToOutput("Variability,Type,1,2,3,4,5,6,7,8,9");
+      int[] highVariabilityAccurate = new int[9];
+      int[] lowVariabilityAccurate = new int[9];
+      int[] highVariabilityModerate = new int[9];
+      int[] lowVariabilityModerate = new int[9];
+      int[] highVariabilityIncorrect = new int[9];
+      int[] lowVariabilityIncorrect = new int[9];
+      for (Record r : ratingRecords)
+      {
+        int ratingInt = Integer.parseInt(r.rating);
+        System.out.println(ratingInt);
+        if (r.variability.compareToIgnoreCase("High") == 0)
+        {
+          if (r.type.compareToIgnoreCase("accurate") == 0) {
+            highVariabilityAccurate[(ratingInt - 1)] += 1;
+          } else if (r.type.compareToIgnoreCase("moderate") == 0) {
+            highVariabilityModerate[(ratingInt - 1)] += 1;
+          } else if (r.type.compareToIgnoreCase("incorrect") == 0) {
+            highVariabilityIncorrect[(ratingInt - 1)] += 1;
+          }
+        }
+        else if (r.variability.compareToIgnoreCase("Low") == 0) {
+          if (r.type.compareToIgnoreCase("accurate") == 0) {
+            lowVariabilityAccurate[(ratingInt - 1)] += 1;
+          } else if (r.type.compareToIgnoreCase("moderate") == 0) {
+            lowVariabilityModerate[(ratingInt - 1)] += 1;
+          } else if (r.type.compareToIgnoreCase("incorrect") == 0) {
+            lowVariabilityIncorrect[(ratingInt - 1)] += 1;
+          }
+        }
+      }
+      String leadingOut = "High,Accurate,";
+      for (int x = 0; x < highVariabilityAccurate.length; x++) {
+        leadingOut = leadingOut + highVariabilityAccurate[x] + ",";
+      }
+      addToOutput(leadingOut);
+      leadingOut = "High,Moderate,";
+      for (int x = 0; x < highVariabilityModerate.length; x++) {
+        leadingOut = leadingOut + highVariabilityModerate[x] + ",";
+      }
+      addToOutput(leadingOut);
+      leadingOut = "High,Incorrect,";
+      for (int x = 0; x < highVariabilityIncorrect.length; x++) {
+        leadingOut = leadingOut + highVariabilityIncorrect[x] + ",";
+      }
+      addToOutput(leadingOut);
+      leadingOut = "Low,Accurate,";
+      for (int x = 0; x < lowVariabilityAccurate.length; x++) {
+        leadingOut = leadingOut + lowVariabilityAccurate[x] + ",";
+      }
+      addToOutput(leadingOut);
+      leadingOut = "Low,Moderate,";
+      for (int x = 0; x < lowVariabilityModerate.length; x++) {
+        leadingOut = leadingOut + lowVariabilityModerate[x] + ",";
+      }
+      addToOutput(leadingOut);
+      leadingOut = "Low,Incorrect,";
+      for (int x = 0; x < lowVariabilityIncorrect.length; x++) {
+        leadingOut = leadingOut + lowVariabilityIncorrect[x] + ",";
+      }
+      addToOutput(leadingOut);
+    }
+  }
+  
+  public static void reset()
+  {
+    session = null;
+    participantCode = "";
+    examiner = "\t";
+    trainingWords = new ArrayList();
+    output = "";
+    preTestRecords = new ArrayList();
+    trainingRecords = new ArrayList();
+    postTestRecords = new ArrayList();
+    ratingRecords = new ArrayList();
+    trainingImagePaths = new HashSet();
+  }
+}

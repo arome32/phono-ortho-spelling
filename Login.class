@@ -1,0 +1,116 @@
+package view;
+
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+import model.Session;
+
+public class Login
+  extends JPanel
+{
+  private DefaultFrame baseFrame;
+  private JTextField txtParticipantCode;
+  private JTextField txtExaminer;
+  private JTextField txtSpeed;
+  
+  public Login(DefaultFrame frame)
+  {
+    this.baseFrame = frame;
+    instantiatePanel();
+  }
+  
+  private void instantiatePanel()
+  {
+    setLayout(null);
+    createTxtParticipantCode();
+    createTxtExaminer();
+    createBtnLogin();
+    createlblTitle();
+    createSpeedTxt();
+  }
+  
+  private void createBtnLogin()
+  {
+    JButton btnLogin = new JButton("Login");
+    btnLogin.addActionListener(new ActionListener()
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        Login.this.login();
+      }
+    });
+    btnLogin.setSize((int)(this.baseFrame.xSize * 0.15D), (int)(this.baseFrame.ySize * 0.05D));
+    btnLogin.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * btnLogin.getSize().getWidth()), 
+      (int)(this.baseFrame.ySize * 0.5D));
+    add(btnLogin);
+  }
+  
+  private void createTxtExaminer()
+  {
+    this.txtExaminer = new JTextField("Examiner");
+    this.txtExaminer.setHorizontalAlignment(0);
+    this.txtExaminer.setSize((int)(this.baseFrame.xSize * 0.15D), (int)(this.baseFrame.ySize * 0.03D));
+    this.txtExaminer.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * this.txtExaminer.getSize().getWidth()), 
+      (int)(this.baseFrame.ySize * 0.4D));
+    add(this.txtExaminer);
+  }
+  
+  private void createTxtParticipantCode()
+  {
+    this.txtParticipantCode = new JTextField("Participant Code");
+    this.txtParticipantCode.setHorizontalAlignment(0);
+    this.txtParticipantCode.setSize((int)(this.baseFrame.xSize * 0.15D), (int)(this.baseFrame.ySize * 0.03D));
+    this.txtParticipantCode.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * this.txtParticipantCode.getSize().getWidth()), 
+      (int)(this.baseFrame.ySize * 0.3D));
+    add(this.txtParticipantCode);
+  }
+  
+  private void createlblTitle()
+  {
+    JLabel lblTitle = new JLabel("Word Trainer");
+    Font labelFont = lblTitle.getFont();
+    lblTitle.setFont(new Font(labelFont.getName(), 0, 48));
+    lblTitle.setHorizontalAlignment(0);
+    lblTitle.setSize((int)(this.baseFrame.xSize * 0.9D), (int)(this.baseFrame.ySize * 0.1D));
+    lblTitle.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * lblTitle.getSize().getWidth()), 10);
+    
+    add(lblTitle);
+  }
+  
+  private void createSpeedTxt()
+  {
+    this.txtSpeed = new JTextField("3");
+    this.txtSpeed.setHorizontalAlignment(0);
+    this.txtSpeed.setSize((int)(this.baseFrame.xSize * 0.05D), (int)(this.baseFrame.ySize * 0.03D));
+    this.txtSpeed.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * this.txtSpeed.getSize().getWidth()), 
+      (int)(this.baseFrame.ySize * 0.6D));
+    add(this.txtSpeed);
+  }
+  
+  private void login()
+  {
+    int temp = 3;
+    boolean isNumber = true;
+    try
+    {
+      temp = Integer.parseInt(this.txtSpeed.getText());
+    }
+    catch (NumberFormatException nfe)
+    {
+      JOptionPane.showMessageDialog(null, this.txtSpeed.getText() + " is not a vaild number.");
+      isNumber = false;
+    }
+    if ((isNumber) && (temp > 0))
+    {
+      Session.createSession(this.txtParticipantCode.getText(), this.txtExaminer.getText());
+      Session.trainingSpeed = temp;
+      this.baseFrame.showMenu(this);
+    }
+  }
+}

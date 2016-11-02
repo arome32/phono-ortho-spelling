@@ -1,0 +1,14 @@
+package model;
+
+public class Record
+{
+  public String selected = "";
+  public String answer = "";
+  public String correct = "";
+  public String words = "";
+  public String images = "";
+  public String variability = "";
+  public String training = "";
+  public String type = "";
+  public String rating = "";
+}

@@ -1,0 +1,68 @@
+package view;
+
+import java.awt.Dimension;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JPanel;
+
+public class Menu
+  extends JPanel
+{
+  private DefaultFrame baseFrame;
+  private JComboBox<String> ddlCategories;
+  
+  public Menu(DefaultFrame frame)
+  {
+    this.baseFrame = frame;
+    instantiatePanel();
+  }
+  
+  private void instantiatePanel()
+  {
+    setLayout(null);
+    createBtnImagePreTest();
+    createBtnTraining();
+  }
+  
+  private void createBtnImagePreTest()
+  {
+    JButton btnImageTest = new JButton("Start Pretest");
+    btnImageTest.addActionListener(new ActionListener()
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        Menu.this.startImagePreTest();
+      }
+    });
+    btnImageTest.setSize((int)(this.baseFrame.xSize * 0.15D), (int)(this.baseFrame.ySize * 0.05D));
+    btnImageTest.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * btnImageTest.getSize().getWidth()), (int)(this.baseFrame.ySize * 0.4D));
+    add(btnImageTest);
+  }
+  
+  private void createBtnTraining()
+  {
+    JButton btnAudioTest = new JButton("Load Words");
+    btnAudioTest.addActionListener(new ActionListener()
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        Menu.this.showLoadTrainingImages();
+      }
+    });
+    btnAudioTest.setSize((int)(this.baseFrame.xSize * 0.15D), (int)(this.baseFrame.ySize * 0.05D));
+    btnAudioTest.setLocation((int)(this.baseFrame.xSize * 0.5D - 0.5D * btnAudioTest.getSize().getWidth()), (int)(this.baseFrame.ySize * 0.5D));
+    add(btnAudioTest);
+  }
+  
+  private void startImagePreTest()
+  {
+    this.baseFrame.showInstructions("ImageIntroTest", this);
+  }
+  
+  private void showLoadTrainingImages()
+  {
+    this.baseFrame.showLoadTrainingWords(this);
+  }
+}
