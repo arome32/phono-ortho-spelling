@@ -56,7 +56,8 @@ class Pretest(ttk.Frame):
         self.controller = controller
         self.grid()
         self.nouns = [Noun(name) for name in os.listdir("Nouns")]
-        self.pairs = [(self.nouns[i], self.nouns[i+1]) for i in range(0, 18, 2)]
+        self.nouns = list(filter(lambda x: x.name != '.DS_Store', self.nouns))
+        self.pairs = [[self.nouns[i], self.nouns[i+1]] for i in range(0, 18, 2)]
 
         spelling = tk.StringVar()
         spelling_entry = ttk.Entry(self, width=20, textvariable = spelling)
@@ -64,35 +65,46 @@ class Pretest(ttk.Frame):
         spelling_label.grid(row = 1, column = 0)
         spelling_entry.grid(row = 1, column = 1)
 
+        # Shuffle pairs
         random.shuffle(self.pairs)
-        
-        # Enter button
-        gen = self.noun_generator()
+        # Shuffle words in each pair
+        for pair in self.pairs:
+            random.shuffle(pair)
 
-        self.noun = next(gen)
+        # Enter button
+        self.pair_iterator = iter(self.pairs)
+        self.pair = next(self.pair_iterator)
+        self.noun_iterator = iter(self.pair)
+        self.noun = next(self.noun_iterator)
         print(self.noun.name)
         self.show_pretest_image(self.noun)
         spelling_entry.focus()
 
         def enter(sp):
-            if sp == self.noun.name: 
-                print('ok') 
-            else: print('not ok')
-            self.noun = next(gen)
+            if sp == self.noun.name:
+                self.pair = next(self.pair_iterator)
+            else:
+                try:
+                    self.noun = next(self.noun_iterator)
+                except StopIteration:
+                    try:
+                        self.pair = next(self.pair_iterator)
+                        self.noun = next(iter(self.pair))
+                    except StopIteration:
+                        print('done with iteration!')
+                        # Do post-processing
+                        return
+
             print(self.noun.name)
             self.show_pretest_image(self.noun)
             # Clear the field
             spelling_entry.delete(0, 'end')
 
+
         enter_button = ttk.Button(self, text = "Enter",
                 command = lambda: enter(spelling_entry.get()))
         enter_button.grid(row = 2, column = 1)
         self.controller.bind('<Return>', lambda x: enter(spelling_entry.get()))
-
-    # choose a word pair randomly
-    def noun_generator(self):
-        for pair in self.pairs:
-            yield random.choice(pair)
 
     def show_pretest_image(self, randomnoun):
         randomimage = random.choice(randomnoun.imgs)
