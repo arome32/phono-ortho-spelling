@@ -3,9 +3,9 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
 import simpleaudio as sa
+from glob import glob
 from PIL import Image, ImageTk
 import random
-from glob import glob
 import os
 
 # from Session import Session
@@ -20,10 +20,6 @@ class Noun(object):
         self.imgs = glob("Nouns/{}/*.jpg".format(self.name))
         # self.imagecollection = os.listdir(imgs_path)
 
-def get_nouns():
-    nouns = [Noun(name) for name in os.listdir("Nouns")]
-    print(nouns[0].imgs)
-
 class MainApplication(tk.Tk):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -33,7 +29,7 @@ class MainApplication(tk.Tk):
         container.grid_columnconfigure(0, weight=1)
 
         self.frames = {}
-        for f in (Login, Instructions, Pretest):
+        for f in (Login, Instructions, Pretest, end_pretest):
             name = f.__name__
             frame = f(container, self)
             self.frames[name] = frame
@@ -45,29 +41,86 @@ class MainApplication(tk.Tk):
         frame = self.frames[page_name]
         frame.tkraise()
 
-class Pretest(ttk.Frame):
+class end_pretest(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
         self.grid()
+        label = ttk.Label(self, text = "Pretest done")
+        label.grid()
 
-        # Define elements
-        # choose a word pair randomly
+class Pretest(ttk.Frame):
+    
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+        self.controller = controller
+        self.grid()
+        self.nouns = [Noun(name) for name in os.listdir("Nouns")]
+        self.pairs = [(self.nouns[i], self.nouns[i+1]) for i in range(0, 18, 2)]
 
-        # Image appears
-        image = Image.open("Osteoclast_Good_6.png")
-        photo = ImageTk.PhotoImage(image)
-        l = ttk.Label(self, image = photo)
-        l.image = photo
-        l.grid(row = 0, columnspan=2, padx = 10, pady = 10, sticky = "nsew")
         spelling = tk.StringVar()
         spelling_entry = ttk.Entry(self, width=20, textvariable = spelling)
         spelling_label = ttk.Label(self, text = "Type word here")
         spelling_label.grid(row = 1, column = 0)
         spelling_entry.grid(row = 1, column = 1)
-        # randomly choose a member of the pair
-        # textbox appears
+
+        random.shuffle(self.pairs)
+        
         # Enter button
+        gen = self.noun_generator()
+
+        self.noun = next(gen)
+        print(self.noun.name)
+        self.show_pretest_image(self.noun)
+        spelling_entry.focus()
+
+        def enter(sp):
+            if sp == self.noun.name: 
+                print('ok') 
+            else: print('not ok')
+            self.noun = next(gen)
+            print(self.noun.name)
+            self.show_pretest_image(self.noun)
+            # Clear the field
+            spelling_entry.delete(0, 'end')
+
+        enter_button = ttk.Button(self, text = "Enter",
+                command = lambda: enter(spelling_entry.get()))
+        enter_button.grid(row = 2, column = 1)
+        self.controller.bind('<Return>', lambda x: enter(spelling_entry.get()))
+
+    # choose a word pair randomly
+    def noun_generator(self):
+        for pair in self.pairs:
+            yield random.choice(pair)
+
+    def show_pretest_image(self, randomnoun):
+        randomimage = random.choice(randomnoun.imgs)
+
+        # Image appears
+        image = Image.open(randomimage)
+        photo = ImageTk.PhotoImage(image)
+        image_label = ttk.Label(self, image = photo)
+        image_label.image = photo
+        image_label.grid(row = 0, columnspan=2, padx = 10, pady = 10, sticky = "nsew")
+
+    # def run_pretest(self, spelling_entry): 
+    #     n = 0
+    #     spelling = spelling_entry.get()
+    #     print(spelling)
+    #     if spelling != "" and spelling == randomnoun.name:
+    #         print('correcto!')
+    #     else:
+    #         print('wrong!')
+    #         yield
+    #             else:
+    #             print('done2')
+    #             self.controller.show_frame("end_pretest")
+
+
+
+
+            
     # command to execute when enter is clicked
         # if participant misspells word:
             # test them with next word in set
@@ -132,6 +185,5 @@ class Login(ttk.Frame):
 
 
 if __name__=="__main__":
-    # app = MainApplication()
-    # app.mainloop()
-    get_nouns()
+    app = MainApplication()
+    app.mainloop()
