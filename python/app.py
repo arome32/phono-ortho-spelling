@@ -72,7 +72,7 @@ class Pretest(ttk.Frame):
             random.shuffle(pair)
 
         # Enter button
-        self.pair_iterator = iter(self.pairs)
+        self.pair_iterator = iter(self.pairs[0:8])
         self.pair = next(self.pair_iterator)
         self.noun_iterator = iter(self.pair)
         self.noun = next(self.noun_iterator)
@@ -80,20 +80,30 @@ class Pretest(ttk.Frame):
         self.show_pretest_image(self.noun)
         spelling_entry.focus()
 
+        self.n_wrong = 0
         def enter(sp):
-            if sp == self.noun.name:
-                self.pair = next(self.pair_iterator)
-            else:
-                try:
-                    self.noun = next(self.noun_iterator)
-                except StopIteration:
+            try:
+                if sp == self.noun.name:
+                    self.pair = next(self.pair_iterator)
+                    self.noun = next(iter(self.pair))
+                else:
+                    self.n_wrong = self.n_wrong+1
                     try:
-                        self.pair = next(self.pair_iterator)
-                        self.noun = next(iter(self.pair))
+                        self.noun = next(self.noun_iterator)
                     except StopIteration:
-                        print('done with iteration!')
-                        # Do post-processing
-                        return
+                        try:
+                            self.pair = next(self.pair_iterator)
+                            self.noun = next(iter(self.pair))
+                        except StopIteration:
+                            print('done with iteration!')
+                            # Do post-processing
+                            self.do_post_processing()
+                            return
+            except StopIteration:
+                print('done with iteration!')
+                # do post-processing
+                self.do_post_processing()
+                return
 
             print(self.noun.name)
             self.show_pretest_image(self.noun)
@@ -106,6 +116,11 @@ class Pretest(ttk.Frame):
         enter_button.grid(row = 2, column = 1)
         self.controller.bind('<Return>', lambda x: enter(spelling_entry.get()))
 
+    def do_post_processing(self):
+        print(self.controller.participant_code)
+        print(self.controller.examiner)
+        print(self.n_wrong)
+
     def show_pretest_image(self, randomnoun):
         randomimage = random.choice(randomnoun.imgs)
 
@@ -116,26 +131,6 @@ class Pretest(ttk.Frame):
         image_label.image = photo
         image_label.grid(row = 0, columnspan=2, padx = 10, pady = 10, sticky = "nsew")
 
-    # def run_pretest(self, spelling_entry): 
-    #     n = 0
-    #     spelling = spelling_entry.get()
-    #     print(spelling)
-    #     if spelling != "" and spelling == randomnoun.name:
-    #         print('correcto!')
-    #     else:
-    #         print('wrong!')
-    #         yield
-    #             else:
-    #             print('done2')
-    #             self.controller.show_frame("end_pretest")
-
-
-
-
-            
-    # command to execute when enter is clicked
-        # if participant misspells word:
-            # test them with next word in set
 
 class Instructions(ttk.Frame):
     def __init__(self, parent, controller):
@@ -177,14 +172,16 @@ class Login(ttk.Frame):
         examiner = tk.StringVar()
         examiner_entry = ttk.Entry(self, width=20, textvariable = examiner)
         examiner_label = ttk.Label(self, text = "Examiner:", style = "Label")
-        
+
         def login():
             controller.show_frame("Instructions")
             play_audio("instructions.wav")
             play_audio("instructions.wav")
+            self.controller.participant_code = participant_code_entry.get()
+            self.controller.examiner = examiner_entry.get()
 
         login_button = ttk.Button(self, text = "Login", command = login)
-                
+
 
         # Arrange the elements
         title.grid(row = 0, columnspan=3, pady = 5)
@@ -193,6 +190,7 @@ class Login(ttk.Frame):
         examiner_label.grid(row = 2, column = 1,sticky = tk.E, padx = 1)
         examiner_entry.grid(row = 2, column = 2, padx = 1)
         login_button.grid(row = 3, column = 2, pady = 10)
+        self.controller.bind('<Return>', lambda: login())
         participant_code_entry.focus()
 
 
