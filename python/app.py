@@ -72,7 +72,7 @@ class Pretest(ttk.Frame):
             random.shuffle(pair)
 
         # Enter button
-        self.pair_iterator = iter(self.pairs[0:8])
+        self.pair_iterator = iter(self.pairs[0:2])
         self.pair = next(self.pair_iterator)
         self.noun_iterator = iter(self.pair)
         self.noun = next(self.noun_iterator)
@@ -81,12 +81,18 @@ class Pretest(ttk.Frame):
         spelling_entry.focus()
 
         self.n_wrong = 0
+        self.records = []
+
         def enter(sp):
             try:
                 if sp == self.noun.name:
+                    print('correct spelling!')
+                    self.record(sp, 1)
                     self.pair = next(self.pair_iterator)
                     self.noun = next(iter(self.pair))
                 else:
+                    print('incorrect spelling!')
+                    self.record(sp, 0)
                     self.n_wrong = self.n_wrong+1
                     try:
                         self.noun = next(self.noun_iterator)
@@ -116,7 +122,16 @@ class Pretest(ttk.Frame):
         enter_button.grid(row = 2, column = 1)
         self.controller.bind('<Return>', lambda x: enter(spelling_entry.get()))
 
+    def record(self, sp, isCorrect):
+        self.records.append([self.noun.name, sp, isCorrect])
+
     def do_post_processing(self):
+        if self.n_wrong < 8:
+            participant_no = self.controller.participant_code
+            with open(participant_no+'_CNM', 'w') as f:
+                for record in self.records:
+                    f.write(str(record)+'\n')
+
         print(self.controller.participant_code)
         print(self.controller.examiner)
         print(self.n_wrong)
