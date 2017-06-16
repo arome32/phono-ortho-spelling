@@ -5,8 +5,8 @@ from os.path import normpath
 import pandas as pd
 import simpleaudio as sa
 from glob import glob
-from time import sleep
 from PIL import Image, ImageTk
+import itertools
 import tkinter as tk
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
@@ -17,7 +17,7 @@ from tkinter.scrolledtext import ScrolledText
 
 def play_audio(filepath):
     wave_obj = sa.WaveObject.from_wave_file(filepath)
-    wave_obj.play()
+    play_obj = wave_obj.play()
 
 def splitlist(li):
     """ Randomly shuffle elements of list into two sublists."""
@@ -33,8 +33,10 @@ class Noun(object):
     def __init__(self, name, length):
         self.name = name
         self.length = length
-        self.img = "Stimuli/Active/{}/image + sound/pic_{}.jpg".format(self.name.capitalize(), self.name)
-        self.audios = glob("Stimuli/Active/{}/image + sound/*.wav".format(self.name.capitalize()))
+        self.img = "Stimuli/Active/{}/image + sound/pic_{}.jpg".format(
+            self.name.capitalize(), self.name)
+        self.audios = glob("Stimuli/Active/{}/image + sound/*.wav".format(
+            self.name.capitalize()))
 
 nouns = {}
 
@@ -127,6 +129,7 @@ class PretestInstructionsWindow(ttk.Frame):
 
     def continue_command(self, *args):
         self.controller.show_any_questions_window()
+
 class AnyQuestionsWindow(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
@@ -140,6 +143,7 @@ class AnyQuestionsWindow(ttk.Frame):
 
     def continue_command(self, *args):
         self.controller.start_pretest()
+
 class PretestModel:
     def __init__(self, controller):
         self.controller, self.nouns = controller, short_nouns + long_nouns
@@ -264,8 +268,8 @@ class TrainingInstructionsWindow(ttk.Frame):
                 command = self.controller.start_training).grid()
         play_audio(normpath("instructions_audio_files/training_instructions.wav"))
 
-    def proceed_to_training(self, *args): self.controller.start_training()
-
+    def proceed_to_training(self, *args): 
+        self.controller.start_training()
 
 class TrainingModel:
     def __init__(self, controller):
@@ -291,39 +295,71 @@ class TrainingModel:
         # Creating an iterator for the combined list of nouns
         self.nouns = self.hi_variability + self.lo_variability
         random.shuffle(self.nouns)
-        # self.noun = next(self.nouns)
+        self.list_of_words = []
+
+    def myGenerator(self, variability):
+        for noun in self.nouns:
+            if noun.variability == "high":
+                for audio in noun.audios:
+                    yield noun, PIL.ImageTk.PhotoImage(PIL.Image.open(noun.img)), audio 
+            elif noun.variability == "low":
+                audio = random.choice(noun.audios)
+                for i in range(10):
+                    yield noun, PIL.ImageTk.PhotoImage(PIL.Image.open(noun.img)), audio 
 
 class TrainingView(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
-        self.parent = parent
-        self.controller = controller
-        label = ttk.Label(self, text = "Training Window")
-        label.grid(row=0, column=0)
-        # Play audio corresponding to words
-        
-    def set_image(self,noun):
-        self.noun = noun
-        image = PIL.Image.open(self.noun.img)
-        photo = PIL.ImageTk.PhotoImage(image)
-        self.ImageBox = ttk.Label(self, image = photo)
-        self.ImageBox.image=photo
-        self.ImageBox.grid(row=0,columnspan=2,
-                           padx=10,pady=10,sticky="nsew")
-
+        self.parent, self.controller = parent, controller
+        self.controller.root.title('Training')
+        self.ImageBox = ttk.Label(self)
+        self.ImageBox.grid()
+    
 class TrainingController:
     def __init__(self, root):
-        self.model = TrainingModel(self)
-        self.root = root
+        self.model, self.root = TrainingModel(self), root
         self.view = TrainingView(root.container, self)
-        self.view.grid()
-        for noun in self.model.nouns:
-            self.view.set_image(noun)
-        self.view.set_image(self.view.noun)
-        # self.view.ready_button.config(command=self.begin_training)
-        
-    def ready(self, *args):
+        self.mylist = list(self.model.myGenerator('HI'))
+        random.shuffle(self.mylist)
+        self.iterator = iter(self.mylist)
+        self.set_image()
+
+    def set_image(self):
+        try:
+            noun, photo, audio = next(self.iterator) 
+            self.model.list_of_words.append((noun.name, audio, noun.variability))
+            self.view.ImageBox.configure(image = photo)
+            self.view.ImageBox.image=photo
+            self.root.after(500, self.play_image_audio, audio)
+        except StopIteration:
+            photo = PIL.ImageTk.PhotoImage(PIL.Image.open('end_training_fixation_image.png'))
+            self.view.ImageBox.configure(image = photo)
+            self.view.ImageBox.image=photo
+            # play_audio('post_test_production_audio.wav')
+            pass
+
+    def play_image_audio(self, filepath):
+        wave_obj = sa.WaveObject.from_wave_file(filepath)
+        play_obj = wave_obj.play()
+        play_obj.wait_done()
+        self.set_image()
+
+def ready(self, *args):
         self.view.ready_button.destroy()
+
+class PostTestProductionModel:
+    def __init__(self):
+        self.nouns = short_nouns+long_nouns
+
+class PostTestProductionView(ttk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+        self.parent, self.controller = parent, controller
+
+class PostTestProductionController:
+    def __init__(self, root):
+        self.model, self.root = PostTestProductionModel(self), root
+        self.view = PostTestProductionView(root.container, self)
 
 class ThankYouScreen(ttk.Frame):
     def __init__(self, parent, controller, condition_met):
@@ -376,7 +412,7 @@ class MainApplication(tk.Tk):
         self.TrainingController = TrainingController(self)
         self.TrainingController.view.grid(row=0,column=0,sticky="nsew")
         self.TrainingController.view.tkraise()
-    # def show_post_test_production_instructions(self):
+    def show_post_test_production_instructions(self):
 
 if __name__=="__main__":
     app = MainApplication()
