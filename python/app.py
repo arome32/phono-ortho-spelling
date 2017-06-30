@@ -12,6 +12,7 @@ from typing import List
 import tkinter as tk
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
+import pandas as pd
 
 #==============================================================================
 # Some helper functions
@@ -456,6 +457,8 @@ class PostTestPerceptionModel:
         random.shuffle(assigned_nouns)
         self.nouns = iter(assigned_nouns)
         self.list_of_words = []
+        self.all_plausible_spellings = pd.read_csv('Stimuli/plausible_spellings.csv',
+                index_col=0, header = None).T
 
 class PostTestPerceptionView(ttk.Frame):
     def __init__(self, parent, controller):
@@ -467,46 +470,63 @@ class PostTestPerceptionView(ttk.Frame):
         # self.EnterButton = ttk.Button(self, text = 'Next Word')
         # self.EnterButton.grid(row=8, columnspan=2)
         self.spellings = [tk.Label(self, text = "spelling_"+str(i), height = 10,
-            width = 25, bg=1) for i in range(0,6)]
-        self.spellings[0].bind("<Button-1>",self.controller.set_image)
-        self.spellings[1].bind("<Button-1>",self.controller.set_image)
-        self.spellings[2].bind("<Button-1>",self.controller.set_image)
-        self.spellings[3].bind("<Button-1>",self.controller.set_image)
-        self.spellings[4].bind("<Button-1>",self.controller.set_image)
-        self.spellings[5].bind("<Button-1>",self.controller.set_image)
+            width = 30, borderwidth=1, relief="solid") for i in range(0,6)]
+        for label in self.spellings:
+            label.bind("<Button-1>",self.controller.check_spelling, label)
+
+        # Place the spellings in a grid
+        self.spellings[0].grid(row = 2, column = 0)
+        self.spellings[1].grid(row = 2, column = 1)
+        self.spellings[2].grid(row = 3, column = 0)
+        self.spellings[3].grid(row = 3, column = 1)
+        self.spellings[4].grid(row = 4, column = 0)
+        self.spellings[5].grid(row = 4, column = 1)
+
 
 class PostTestPerceptionController:
     def __init__(self, root):
         self.root = root
         self.model = PostTestPerceptionModel(self.root.assigned_nouns)
         self.view = PostTestPerceptionView(root.container, self)
+        self.noun = next(self.model.nouns)
         self.set_image()
-        # self.view.EnterButton.config(command=self.set_image)
-        # root.bind('<Return>', self.NextWord)
 
     def set_image(self, *args):
+        photo = PIL.ImageTk.PhotoImage(PIL.Image.open(self.noun.img)) 
+        audio = self.noun.talker_11
+        self.model.list_of_words.append((self.noun.name, audio, self.noun.variability))
+        self.view.ImageBox.configure(image = photo)
+        self.view.ImageBox.image=photo
+        plausible_spellings = self.model.all_plausible_spellings[self.noun.name].tolist()+[self.noun.name]
+        random.shuffle(plausible_spellings)
+        for i in range(0,6):
+            self.view.spellings[i].config(text = plausible_spellings[i])
+        self.root.after(500, self.play_image_audio, audio)
+
+    def check_spelling(self, label):
+        if self.noun.name == label.widget.cget("text"):
+            print('correct spelling')
+        else:
+            print('wrong spelling')
+
         try:
-            noun = next(self.model.nouns)
-            photo = PIL.ImageTk.PhotoImage(PIL.Image.open(noun.img)) 
-            audio = noun.talker_11
-            self.model.list_of_words.append((noun.name, audio, noun.variability))
-            self.view.ImageBox.configure(image = photo)
-            self.view.ImageBox.image=photo
-            self.root.after(500, self.play_image_audio, audio)
-            self.view.spellings[0].grid(row = 2, column = 0)
-            self.view.spellings[1].grid(row = 2, column = 1)
-            self.view.spellings[2].grid(row = 3, column = 0)
-            self.view.spellings[3].grid(row = 3, column = 1)
-            self.view.spellings[4].grid(row = 4, column = 0)
-            self.view.spellings[5].grid(row = 4, column = 1)
+            self.noun = next(self.model.nouns)
+            self.set_image()
         except StopIteration:
             print('post test perception finished')
-            pass
+            self.root.show_final_screen()
 
     def play_image_audio(self, filepath):
         wave_obj = sa.WaveObject.from_wave_file(filepath)
         play_obj = wave_obj.play()
                 
+class FinalScreen(ttk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+        self.controller = controller
+        self.grid(column = 0, row = 0)
+        # Define the elements
+        tk.Label(self, text = "Thank you", height = 50, width = 100).grid()
 
 class MainApplication(tk.Tk):
     def __init__(self):
@@ -563,6 +583,9 @@ class MainApplication(tk.Tk):
         self.PostTestPerceptionController = PostTestPerceptionController(self)
         self.PostTestPerceptionController.view.grid(row=0,column=0,sticky="nsew")
         self.PostTestPerceptionController.view.tkraise()
+    def show_final_screen(self):
+        self.FinalScreen = FinalScreen(self.container, self)
+        self.FinalScreen.grid(row = 0, column = 0, sticky = "nsew")
 
 if __name__=="__main__":
     app = MainApplication()
