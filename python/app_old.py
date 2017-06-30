@@ -7,8 +7,6 @@ import simpleaudio as sa
 from glob import glob
 from PIL import Image, ImageTk
 import itertools
-import typing
-from typing import List
 import tkinter as tk
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
@@ -21,28 +19,24 @@ def play_audio(filepath):
     wave_obj = sa.WaveObject.from_wave_file(filepath)
     play_obj = wave_obj.play()
 
-def splitlist(xs: List) -> List:
+def splitlist(li):
     """ Randomly shuffle elements of list into two sublists."""
-    random.shuffle(xs)
-    length = len(xs)//2
-    return xs[:length], xs[length:2*length]
+    random.shuffle(li)
+    length = len(li)//2
+    return li[:length], li[length:2*length]
 
 #==============================================================================
 # Noun helper class and noun lists
 #==============================================================================
 
 class Noun(object):
-    def __init__(self, name: str, length: int):
+    def __init__(self, name, length):
         self.name = name
         self.length = length
         self.img = "Stimuli/Active/{}/image + sound/pic_{}.jpg".format(
             self.name.capitalize(), self.name)
         self.audios = glob("Stimuli/Active/{}/image + sound/*.wav".format(
             self.name.capitalize()))
-        random.shuffle(self.audios)
-        # Randomly pick one talker as talker 11
-        self.talker_11, *rest_of_talkers = self.audios
-        self.audios = rest_of_talkers 
 
 nouns = {}
 
@@ -106,7 +100,6 @@ class LoginWindow(ttk.Frame):
         self.controller.show_pretest_instructions()
         self.controller.participant_code = self.participant_code_entry.get()
         self.controller.examiner = self.examiner_entry.get()
-
 class PretestInstructionsWindow(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
@@ -195,7 +188,8 @@ class PretestView(ttk.Frame):
 
     def set_image(self,noun):
         self.noun = noun
-        photo = PIL.ImageTk.PhotoImage(PIL.Image.open(self.noun.img))
+        image = PIL.Image.open(self.noun.img)
+        photo = PIL.ImageTk.PhotoImage(image)
         self.ImageBox = ttk.Label(self, image = photo)
         self.ImageBox.image=photo
         self.ImageBox.grid(row=0,columnspan=2,
@@ -264,6 +258,109 @@ class EndPretestWindow(ttk.Frame):
     def proceed_to_training_instructions(self, *args):
         self.controller.show_training_instructions()
 
+class TrainingInstructionsWindow(ttk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+        self.parent, self.controller = parent, controller
+        self.controller.bind('<Return>',self.proceed_to_training)
+        ttk.Label(self, text = "Training instructions").grid()
+        ttk.Button(self, text = 'Ready', 
+                command = self.controller.start_training).grid()
+        play_audio(normpath("instructions_audio_files/training_instructions.wav"))
+
+    def proceed_to_training(self, *args): 
+        self.controller.start_training()
+
+class TrainingModel:
+    def __init__(self, controller):
+        self.controller = controller
+        self.short_nouns = short_nouns
+        self.long_nouns = long_nouns
+        random.shuffle(self.short_nouns)
+        random.shuffle(self.long_nouns)
+
+        # split the lists into high and low variability sublists
+        hi_variability_short, lo_variability_short = splitlist(self.short_nouns)
+        hi_variability_long, lo_variability_long = splitlist(self.long_nouns)
+
+        self.hi_variability = hi_variability_short+hi_variability_long
+        self.lo_variability = lo_variability_short+lo_variability_long
+
+        # Create and set the 'variability' parameter for the noun
+        for noun in self.hi_variability:
+            noun.variability = "high"
+        for noun in self.lo_variability:
+            noun.variability = "low"
+
+        # Creating an iterator for the combined list of nouns
+        self.nouns = self.hi_variability + self.lo_variability
+        random.shuffle(self.nouns)
+        self.list_of_words = []
+
+    def myGenerator(self, variability):
+        for noun in self.nouns:
+            if noun.variability == "high":
+                for audio in noun.audios:
+                    yield noun, PIL.ImageTk.PhotoImage(PIL.Image.open(noun.img)), audio 
+            elif noun.variability == "low":
+                audio = random.choice(noun.audios)
+                for i in range(10):
+                    yield noun, PIL.ImageTk.PhotoImage(PIL.Image.open(noun.img)), audio 
+
+class TrainingView(ttk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+        self.parent, self.controller = parent, controller
+        self.controller.root.title('Training')
+        self.ImageBox = ttk.Label(self)
+        self.ImageBox.grid()
+    
+class TrainingController:
+    def __init__(self, root):
+        self.model, self.root = TrainingModel(self), root
+        self.view = TrainingView(root.container, self)
+        self.mylist = list(self.model.myGenerator('HI'))
+        random.shuffle(self.mylist)
+        self.iterator = iter(self.mylist)
+        self.set_image()
+
+    def set_image(self):
+        try:
+            noun, photo, audio = next(self.iterator) 
+            self.model.list_of_words.append((noun.name, audio, noun.variability))
+            self.view.ImageBox.configure(image = photo)
+            self.view.ImageBox.image=photo
+            self.root.after(500, self.play_image_audio, audio)
+        except StopIteration:
+            photo = PIL.ImageTk.PhotoImage(PIL.Image.open('end_training_fixation_image.png'))
+            self.view.ImageBox.configure(image = photo)
+            self.view.ImageBox.image=photo
+            # play_audio('post_test_production_audio.wav')
+            pass
+
+    def play_image_audio(self, filepath):
+        wave_obj = sa.WaveObject.from_wave_file(filepath)
+        play_obj = wave_obj.play()
+        play_obj.wait_done()
+        self.set_image()
+
+def ready(self, *args):
+        self.view.ready_button.destroy()
+
+class PostTestProductionModel:
+    def __init__(self):
+        self.nouns = short_nouns+long_nouns
+
+class PostTestProductionView(ttk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+        self.parent, self.controller = parent, controller
+
+class PostTestProductionController:
+    def __init__(self, root):
+        self.model, self.root = PostTestProductionModel(self), root
+        self.view = PostTestProductionView(root.container, self)
+
 class ThankYouScreen(ttk.Frame):
     def __init__(self, parent, controller, condition_met):
         super().__init__(parent)
@@ -278,243 +375,13 @@ class ThankYouScreen(ttk.Frame):
             ttk.Label(self, text = "Thank you for your help.").grid()
             ttk.Button(self, text = "Exit program", 
                     command = self.controller.quit).grid()
-
-class TrainingInstructionsWindow(ttk.Frame):
-    def __init__(self, parent, controller):
-        super().__init__(parent)
-        self.parent, self.controller = parent, controller
-        self.controller.bind('<Return>',self.proceed_to_training)
-        ttk.Label(self, text = "Training instructions").grid()
-        ttk.Button(self, text = 'Ready', 
-                command = self.controller.start_training).grid()
-        play_audio(normpath("instructions_audio_files/training_instructions.wav"))
-
-    def proceed_to_training(self, *args): 
-        self.controller.start_training()
-
-def assign_nouns(short_nouns, long_nouns):
-    random.shuffle(short_nouns)
-    random.shuffle(long_nouns)
-
-    # split the lists into high and low variability sublists
-    hi_variability_short, lo_variability_short = splitlist(short_nouns)
-    hi_variability_long, lo_variability_long = splitlist(long_nouns)
-
-    hi_variability = hi_variability_short+hi_variability_long
-    lo_variability = lo_variability_short+lo_variability_long
-
-    # Create and set the 'variability' parameter for the noun
-    for noun in hi_variability:
-        noun.variability = "high"
-    for noun in lo_variability:
-        noun.variability = "low"
-
-    # Creating an iterator for the combined list of nouns
-    assigned_nouns = hi_variability + lo_variability
-    random.shuffle(assigned_nouns)
-    return assigned_nouns 
-
-class TrainingModel:
-    def __init__(self, controller):
-        self.controller = controller
-        self.nouns = self.controller.root.assigned_nouns
-        self.list_of_words = []
-
-    def myGenerator(self, variability):
-        for noun in self.nouns:
-            photo = PIL.ImageTk.PhotoImage(PIL.Image.open(noun.img))
-            if noun.variability == "high":
-                for audio in noun.audios:
-                    yield noun, photo, audio 
-            elif noun.variability == "low":
-                audio = random.choice(noun.audios)
-                for i in range(10):
-                    yield noun, photo, audio 
-
-class TrainingView(ttk.Frame):
-    def __init__(self, parent, controller):
-        super().__init__(parent)
-        self.parent, self.controller = parent, controller
-        self.controller.root.title('Training')
-        self.ImageBox = ttk.Label(self)
-        self.ImageBox.grid()
-    
-class TrainingController:
-    def __init__(self, root):
-        self.root = root
-        self.model = TrainingModel(self)
-        self.view = TrainingView(root.container, self)
-        self.mylist = list(self.model.myGenerator(random.choice(['HI','LO'])))
-        random.shuffle(self.mylist)
-        self.iterator = iter(self.mylist[0:2])
-        self.set_image()
-
-    def set_image(self):
-        try:
-            noun, photo, audio = next(self.iterator) 
-            self.model.list_of_words.append((noun.name, audio, noun.variability))
-            self.view.ImageBox.configure(image = photo)
-            self.view.ImageBox.image=photo
-            self.root.after(500, self.play_image_audio, audio)
-        except StopIteration:
-            self.root.show_post_test_production_instructions()
-            pass
-
-    def play_image_audio(self, filepath):
-        wave_obj = sa.WaveObject.from_wave_file(filepath)
-        play_obj = wave_obj.play()
-        play_obj.wait_done()
-        self.set_image()
-
-    def ready(self, *args):
-        self.view.ready_button.destroy()
-
-class PostTestProductionInstructions(ttk.Frame):
-    def __init__(self, parent, controller):
-        super().__init__(parent)
-        self.controller = controller
-        self.grid(column = 0, row = 0)
-        # Define the elements
-        self.ImageBox = ttk.Label(self)
-        self.ImageBox.grid()
-        photo = PIL.ImageTk.PhotoImage(PIL.Image.open('fixation_mark.jpg'))
-        self.ImageBox.configure(image = photo)
-        self.ImageBox.image=photo
-        
-        wave_obj = sa.WaveObject.from_wave_file('instructions_audio_files/post_test_production_instructions.wav')
-        play_obj = wave_obj.play()
-        # play_obj.wait_done()
-
-        ttk.Button(self, text = 'Ready', 
-                command = self.controller.start_post_test_production).grid()
-
-class PostTestProductionModel:
-    def __init__(self, assigned_nouns):
-        self.nouns = iter(assigned_nouns)
-
-class PostTestProductionView(ttk.Frame):
-    def __init__(self, parent, controller):
-        super().__init__(parent)
-        self.parent, self.controller = parent, controller
-
-        self.SpellingEntry = ttk.Entry(self, width=8)
-        self.SpellingEntry.grid(row=1, column=1)
-        self.EnterButton = ttk.Button(self, text = 'Enter')
-        self.EnterButton.grid(row=2, column=1)
-
-class PostTestProductionController:
-    def __init__(self, root):
-        self.root = root
-        self.model = PostTestProductionModel(self.root.assigned_nouns)
-        self.view = PostTestProductionView(root.container, self)
-        self.view.EnterButton.config(command=self.NextWord)
-        # root.bind('<Return>', self.NextWord)
-
-    def start_post_test_production(self):
-        random.shuffle(self.root.assigned_nouns)
-        for noun in assigned_nouns:
-            wave_obj = sa.WaveObject.from_wave_file(noun.talker_11)
-            play_obj = wave_obj.play()
-            play_obj.wait_done()
-
-    def NextWord(self, *args):
-        spelling = self.view.SpellingEntry.get()
-        self.view.SpellingEntry.delete(0, 'end')
-        try:
-            noun = next(self.model.nouns)
-            print(noun.name)
-            if spelling.lower() == noun.name.lower():
-                print('Correct spelling!')
-            else:
-                print('Incorrect spelling!')
-        except StopIteration:
-            print('Post-test production module finished')
-            self.root.show_post_test_perception_instructions()
-            pass
-
-class PostTestPerceptionInstructions(ttk.Frame):
-    def __init__(self, parent, controller):
-        super().__init__(parent)
-        self.controller = controller
-        self.grid(column = 0, row = 0)
-        # Define the elements
-        self.ImageBox = ttk.Label(self)
-        self.ImageBox.grid()
-        photo = PIL.ImageTk.PhotoImage(PIL.Image.open('transition_image.jpg'))
-        self.ImageBox.configure(image = photo)
-        self.ImageBox.image=photo
-        
-        wave_obj = sa.WaveObject.from_wave_file('instructions_audio_files/post_test_perception_instructions.wav')
-        play_obj = wave_obj.play()
-        # play_obj.wait_done()
-
-        ttk.Button(self, text = 'Ready', 
-                command = self.controller.start_post_test_perception).grid()
-
-class PostTestPerceptionModel:
-    def __init__(self, assigned_nouns):
-        random.shuffle(assigned_nouns)
-        self.nouns = iter(assigned_nouns)
-        self.list_of_words = []
-
-class PostTestPerceptionView(ttk.Frame):
-    def __init__(self, parent, controller):
-        super().__init__(parent)
-        self.parent, self.controller = parent, controller
-        self.controller.root.title('Post-Test Perception')
-        self.ImageBox = ttk.Label(self)
-        self.ImageBox.grid(row = 0, columnspan = 2)
-        # self.EnterButton = ttk.Button(self, text = 'Next Word')
-        # self.EnterButton.grid(row=8, columnspan=2)
-        self.spellings = [tk.Label(self, text = "spelling_"+str(i), height = 10,
-            width = 25, bg=1) for i in range(0,6)]
-        self.spellings[0].bind("<Button-1>",self.controller.set_image)
-        self.spellings[1].bind("<Button-1>",self.controller.set_image)
-        self.spellings[2].bind("<Button-1>",self.controller.set_image)
-        self.spellings[3].bind("<Button-1>",self.controller.set_image)
-        self.spellings[4].bind("<Button-1>",self.controller.set_image)
-        self.spellings[5].bind("<Button-1>",self.controller.set_image)
-
-class PostTestPerceptionController:
-    def __init__(self, root):
-        self.root = root
-        self.model = PostTestPerceptionModel(self.root.assigned_nouns)
-        self.view = PostTestPerceptionView(root.container, self)
-        self.set_image()
-        # self.view.EnterButton.config(command=self.set_image)
-        # root.bind('<Return>', self.NextWord)
-
-    def set_image(self, *args):
-        try:
-            noun = next(self.model.nouns)
-            photo = PIL.ImageTk.PhotoImage(PIL.Image.open(noun.img)) 
-            audio = noun.talker_11
-            self.model.list_of_words.append((noun.name, audio, noun.variability))
-            self.view.ImageBox.configure(image = photo)
-            self.view.ImageBox.image=photo
-            self.root.after(500, self.play_image_audio, audio)
-            self.view.spellings[0].grid(row = 2, column = 0)
-            self.view.spellings[1].grid(row = 2, column = 1)
-            self.view.spellings[2].grid(row = 3, column = 0)
-            self.view.spellings[3].grid(row = 3, column = 1)
-            self.view.spellings[4].grid(row = 4, column = 0)
-            self.view.spellings[5].grid(row = 4, column = 1)
-        except StopIteration:
-            print('post test perception finished')
-            pass
-
-    def play_image_audio(self, filepath):
-        wave_obj = sa.WaveObject.from_wave_file(filepath)
-        play_obj = wave_obj.play()
                 
-
 class MainApplication(tk.Tk):
     def __init__(self):
         super().__init__()
         self.container = ttk.Frame(self)
         self.container.grid()
         self.show_login_window()
-        self.assigned_nouns = assign_nouns(short_nouns, long_nouns)
     def show_login_window(self):
         self.LoginWindow = LoginWindow(self.container, self)
         self.LoginWindow.grid(row = 0, column = 0, sticky = "nsew")
@@ -546,23 +413,6 @@ class MainApplication(tk.Tk):
         self.TrainingController.view.grid(row=0,column=0,sticky="nsew")
         self.TrainingController.view.tkraise()
     def show_post_test_production_instructions(self):
-        self.PostTestProductionInstructions= PostTestProductionInstructions(
-                self.container, self)
-        self.PostTestProductionInstructions.grid(row = 0, column = 0, sticky = "nsew")
-        self.PostTestProductionInstructions.tkraise()
-    def start_post_test_production(self):
-        self.PostTestProductionController = PostTestProductionController(self)
-        self.PostTestProductionController.view.grid(row=0,column=0,sticky="nsew")
-        self.PostTestProductionController.view.tkraise()
-    def show_post_test_perception_instructions(self):
-        self.PostTestPerceptionInstructions= PostTestPerceptionInstructions(
-                self.container, self)
-        self.PostTestPerceptionInstructions.grid(row = 0, column = 0, sticky = "nsew")
-        self.PostTestPerceptionInstructions.tkraise()
-    def start_post_test_perception(self):
-        self.PostTestPerceptionController = PostTestPerceptionController(self)
-        self.PostTestPerceptionController.view.grid(row=0,column=0,sticky="nsew")
-        self.PostTestPerceptionController.view.tkraise()
 
 if __name__=="__main__":
     app = MainApplication()
