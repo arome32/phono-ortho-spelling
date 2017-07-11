@@ -1,0 +1,5 @@
+peroxisome,,long
+oxidizer,,short
+dynein,,short
+amphipathic,,long
+reducer,,short

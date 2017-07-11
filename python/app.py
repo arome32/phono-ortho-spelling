@@ -22,11 +22,6 @@ def play_audio(filepath):
     wave_obj = sa.WaveObject.from_wave_file(filepath)
     play_obj = wave_obj.play()
 
-def splitlist(xs: List) -> List:
-    """ Randomly shuffle elements of list into two sublists."""
-    random.shuffle(xs)
-    length = len(xs)//2
-    return xs[:length], xs[length:2*length]
 
 #==============================================================================
 # Noun helper class and noun lists
@@ -44,6 +39,11 @@ class Noun(object):
         # Randomly pick one talker as talker 11
         self.talker_11, *rest_of_talkers = self.audios
         self.audios = rest_of_talkers 
+        self.production_spelling = None
+        self.production_spelling_is_correct = None
+        self.perception_spelling = None
+
+# List of nouns, divided into short and long nouns
 
 nouns = {}
 
@@ -73,16 +73,16 @@ class LoginWindow(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
-        self.grid(column = 0, row = 0)
+        # self.grid(column = 0, row = 0)
 
         # Define the elements
         title = ttk.Label(self,
-                text = "Welcome to the Science Spelling Training")
+                text = "Welcome to the Science Spelling Training", padding = 3)
 
         # Create text field for entering the participant code
         self.participant_code = tk.StringVar()
         self.participant_code_label = ttk.Label(self,
-                text = "Participant Code:", style = "Label")
+                text = "Participant Code:", padding = 10)
         self.participant_code_entry = ttk.Entry(self,
                 width=20, textvariable = self.participant_code)
 
@@ -90,7 +90,7 @@ class LoginWindow(ttk.Frame):
         self.examiner = tk.StringVar()
         self.examiner_entry = ttk.Entry(self, width=20,
                 textvariable = self.examiner)
-        self.examiner_label = ttk.Label(self, text="Examiner:", style="Label")
+        self.examiner_label = ttk.Label(self, text="Examiner:", padding = 10)
         self.login_button = ttk.Button(self, text="Login", command=self.login)
 
         # Arrange the elements
@@ -293,6 +293,12 @@ class TrainingInstructionsWindow(ttk.Frame):
     def proceed_to_training(self, *args): 
         self.controller.start_training()
 
+def splitlist(xs: List) -> List:
+    """ Randomly shuffle elements of list into two sublists."""
+    random.shuffle(xs)
+    length = len(xs)//2
+    return xs[:length], xs[length:2*length]
+
 def assign_nouns(short_nouns, long_nouns):
     random.shuffle(short_nouns)
     random.shuffle(long_nouns)
@@ -304,6 +310,8 @@ def assign_nouns(short_nouns, long_nouns):
     hi_variability = hi_variability_short+hi_variability_long
     lo_variability = lo_variability_short+lo_variability_long
 
+    print([noun.name for noun in hi_variability])
+    print([noun.name for noun in lo_variability])
     # Create and set the 'variability' parameter for the noun
     for noun in hi_variability:
         noun.variability = "high"
@@ -321,7 +329,7 @@ class TrainingModel:
         self.nouns = self.controller.root.assigned_nouns
         self.list_of_words = []
 
-    def myGenerator(self, variability):
+    def myGenerator(self):
         for noun in self.nouns:
             photo = PIL.ImageTk.PhotoImage(PIL.Image.open(noun.img))
             if noun.variability == "high":
@@ -345,7 +353,7 @@ class TrainingController:
         self.root = root
         self.model = TrainingModel(self)
         self.view = TrainingView(root.container, self)
-        self.mylist = list(self.model.myGenerator(random.choice(['HI','LO'])))
+        self.mylist = list(self.model.myGenerator())
         random.shuffle(self.mylist)
         self.iterator = iter(self.mylist[0:2])
         self.set_image()
@@ -356,7 +364,7 @@ class TrainingController:
             self.model.list_of_words.append((noun.name, audio, noun.variability))
             self.view.ImageBox.configure(image = photo)
             self.view.ImageBox.image=photo
-            self.root.after(500, self.play_image_audio, audio)
+            self.root.after(1000, self.play_image_audio, audio)
         except StopIteration:
             self.root.show_post_test_production_instructions()
             pass
@@ -392,6 +400,7 @@ class PostTestProductionInstructions(ttk.Frame):
 class PostTestProductionModel:
     def __init__(self, assigned_nouns):
         self.nouns = iter(assigned_nouns)
+        self.results = []
 
 class PostTestProductionView(ttk.Frame):
     def __init__(self, parent, controller):
@@ -423,13 +432,22 @@ class PostTestProductionController:
         self.view.SpellingEntry.delete(0, 'end')
         try:
             noun = next(self.model.nouns)
+            play_audio(noun.talker_11)
             print(noun.name)
             if spelling.lower() == noun.name.lower():
                 print('Correct spelling!')
+                self.production_spelling_is_correct = True
             else:
                 print('Incorrect spelling!')
+                self.production_spelling_is_correct = False
+            noun.production_spelling = spelling
+            self.model.results.append((noun.name, noun.variability, noun.talker_11,
+                spelling, self.production_spelling_is_correct))
         except StopIteration:
             print('Post-test production module finished')
+            with open(str(self.root.LoginWindow.participant_code)+'_production_results.txt','w') as f:
+                for word in self.model.results:
+                    f.write(str(word)+'\n')
             self.root.show_post_test_perception_instructions()
             pass
 
@@ -457,7 +475,7 @@ class PostTestPerceptionModel:
         random.shuffle(assigned_nouns)
         self.nouns = iter(assigned_nouns)
         self.list_of_words = []
-        self.all_plausible_spellings = pd.read_csv('Stimuli/plausible_spellings.csv',
+        self.plausible_spellings_table = pd.read_csv('Stimuli/plausible_spellings.csv',
                 index_col=0, header = None).T
 
 class PostTestPerceptionView(ttk.Frame):
@@ -488,33 +506,69 @@ class PostTestPerceptionController:
         self.root = root
         self.model = PostTestPerceptionModel(self.root.assigned_nouns)
         self.view = PostTestPerceptionView(root.container, self)
-        self.noun = next(self.model.nouns)
-        self.set_image()
+        self.set_training_image()
 
-    def set_image(self, *args):
-        photo = PIL.ImageTk.PhotoImage(PIL.Image.open(self.noun.img)) 
-        audio = self.noun.talker_11
-        self.model.list_of_words.append((self.noun.name, audio, self.noun.variability))
+    def set_training_image(self):
+        self.noun = 'earth'
+        photo = PIL.ImageTk.PhotoImage(PIL.Image.open('earth.jpg')) 
+        audio = 'instructions_audio_files/earth.wav'
         self.view.ImageBox.configure(image = photo)
         self.view.ImageBox.image=photo
-        plausible_spellings = self.model.all_plausible_spellings[self.noun.name].tolist()+[self.noun.name]
+        plausible_spellings = ['earth','erth','ert','urth','urt','earthe']
         random.shuffle(plausible_spellings)
+        for i in range(0,6):
+            self.view.spellings[i].config(text = plausible_spellings[i])
+
+    def set_image(self, *args):
+        self.noun = next(self.model.nouns)
+        photo = PIL.ImageTk.PhotoImage(PIL.Image.open(self.noun.img)) 
+        audio = self.noun.talker_11
+        self.view.ImageBox.configure(image = photo)
+        self.view.ImageBox.image=photo
+        wrong_spellings = self.model.plausible_spellings_table[self.noun.name].tolist()
+        plausible_spellings = [self.noun.name]
+        if not self.noun.production_spelling_is_correct:
+            plausible_spellings.append(self.noun.production_spelling)
+            plausible_spellings+= random.sample(wrong_spellings, 4)
+        else:
+            plausible_spellings.append(wrong_spellings)
+        random.shuffle(plausible_spellings)
+        print(plausible_spellings)
         for i in range(0,6):
             self.view.spellings[i].config(text = plausible_spellings[i])
         self.root.after(500, self.play_image_audio, audio)
 
     def check_spelling(self, label):
-        if self.noun.name == label.widget.cget("text"):
-            print('correct spelling')
-        else:
-            print('wrong spelling')
+        selected_spelling = label.widget.cget("text")
 
-        try:
-            self.noun = next(self.model.nouns)
+        if self.noun == 'earth':
+            if selected_spelling == 'earth':
+                spelling_is_correct = True
+                print('correct spelling')
+            else:
+                spelling_is_correct = False
+                print('wrong spelling')
             self.set_image()
-        except StopIteration:
-            print('post test perception finished')
-            self.root.show_final_screen()
+
+        else:
+            if self.noun.name == selected_spelling:
+                spelling_is_correct = True
+                print('correct spelling')
+            else:
+                spelling_is_correct = False
+                print('wrong spelling')
+
+            try:
+                self.model.list_of_words.append((self.noun.name, 
+                    self.noun.variability, self.noun.production_spelling,
+                    selected_spelling, spelling_is_correct))
+                self.set_image()
+            except StopIteration:
+                print('post test perception finished')
+                with open(str(self.root.LoginWindow.participant_code)+'_perception_results.txt','w') as f:
+                    for word in self.model.list_of_words:
+                        f.write(str(word)+'\n')
+                self.root.show_final_screen()
 
     def play_image_audio(self, filepath):
         wave_obj = sa.WaveObject.from_wave_file(filepath)
@@ -531,7 +585,7 @@ class FinalScreen(ttk.Frame):
 class MainApplication(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.container = ttk.Frame(self)
+        self.container = ttk.Frame(self, height = 300, width = 400)
         self.container.grid()
         self.show_login_window()
         self.assigned_nouns = assign_nouns(short_nouns, long_nouns)
