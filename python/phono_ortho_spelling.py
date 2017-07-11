@@ -31,14 +31,10 @@ class Noun(object):
     def __init__(self, name: str, length: int):
         self.name = name
         self.length = length
-        self.img = "Stimuli/Active/{}/image + sound/pic_{}.jpg".format(
-            self.name.capitalize(), self.name)
-        self.audios = glob("Stimuli/Active/{}/image + sound/*.wav".format(
-            self.name.capitalize()))
+        self.img = f"Stimuli/Active/{self.name}/pic_{self.name}.jpg"
+        self.audios = glob(f"Stimuli/Active/{self.name}/*.wav")
         random.shuffle(self.audios)
-        # Randomly pick one talker as talker 11
-        self.talker_11, *rest_of_talkers = self.audios
-        self.audios = rest_of_talkers 
+        self.novel_talker = f"Stimuli/Active/novel_talker/speaker_9c_{name.lower()}.wav"
         self.production_spelling = None
         self.production_spelling_is_correct = None
         self.perception_spelling = None
@@ -66,8 +62,8 @@ nouns['long'] = [
     'chemiosmotic',
     ]
 
-short_nouns = [Noun(name,'short') for name in nouns['short']]
-long_nouns = [Noun(name,'long') for name in nouns['long']]
+short_nouns = [Noun(name.capitalize(),'short') for name in nouns['short']]
+long_nouns = [Noun(name.capitalize(),'long') for name in nouns['long']]
 
 class LoginWindow(ttk.Frame):
     def __init__(self, parent, controller):
@@ -113,8 +109,8 @@ class PretestInstructionsWindow(ttk.Frame):
         super().__init__(parent)
         self.parent, self.controller = parent, controller
 
-        play_audio("instructions_audio_files/pretest_instructions.wav")
-        play_audio("instructions_audio_files/test_words.wav")
+        play_audio("instructions_audio_files/directions_pretest.wav")
+        play_audio("instructions_audio_files/directions_pretest.wav")
 
         # Define elements
         with open('pretest_instructions.txt', 'r') as f: data = f.read()
@@ -128,7 +124,7 @@ class PretestInstructionsWindow(ttk.Frame):
         self.continue_button = ttk.Button(self, text = "Continue",
                 command = self.continue_command)
         replay_button = ttk.Button(self, text = "Replay test words",
-         command=lambda: play_audio("instructions_audio_files/test_words.wav"))
+         command=lambda: play_audio("instructions_audio_files/directions_pretest.wav"))
         self.controller.bind('<Return>',self.continue_command)
         self.continue_button.grid()
 
@@ -142,7 +138,7 @@ class AnyQuestionsWindow(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.parent, self.controller = parent, controller
-        play_audio("instructions_audio_files/any_questions.wav")
+        play_audio("instructions_audio_files/directions_anyquestions.wav")
         title = ttk.Label(self, text = "Any questions?")
         title.grid(row = 0, columnspan = 3, pady = 5)
         self.continue_button = ttk.Button(self, text = "Continue",
@@ -288,7 +284,7 @@ class TrainingInstructionsWindow(ttk.Frame):
         ttk.Label(self, text = "Training instructions").grid()
         ttk.Button(self, text = 'Ready', 
                 command = self.controller.start_training).grid()
-        play_audio(normpath("instructions_audio_files/training_instructions.wav"))
+        play_audio(normpath("instructions_audio_files/directions_training.wav"))
 
     def proceed_to_training(self, *args): 
         self.controller.start_training()
@@ -390,7 +386,7 @@ class PostTestProductionInstructions(ttk.Frame):
         self.ImageBox.configure(image = photo)
         self.ImageBox.image=photo
         
-        wave_obj = sa.WaveObject.from_wave_file('instructions_audio_files/post_test_production_instructions.wav')
+        wave_obj = sa.WaveObject.from_wave_file('instructions_audio_files/directions_posttest_production.wav')
         play_obj = wave_obj.play()
         # play_obj.wait_done()
 
@@ -423,7 +419,7 @@ class PostTestProductionController:
     def start_post_test_production(self):
         random.shuffle(self.root.assigned_nouns)
         for noun in assigned_nouns:
-            wave_obj = sa.WaveObject.from_wave_file(noun.talker_11)
+            wave_obj = sa.WaveObject.from_wave_file(noun.novel_talker)
             play_obj = wave_obj.play()
             play_obj.wait_done()
 
@@ -432,7 +428,7 @@ class PostTestProductionController:
         self.view.SpellingEntry.delete(0, 'end')
         try:
             noun = next(self.model.nouns)
-            play_audio(noun.talker_11)
+            play_audio(noun.novel_talker)
             print(noun.name)
             if spelling.lower() == noun.name.lower():
                 print('Correct spelling!')
@@ -441,7 +437,7 @@ class PostTestProductionController:
                 print('Incorrect spelling!')
                 self.production_spelling_is_correct = False
             noun.production_spelling = spelling
-            self.model.results.append((noun.name, noun.variability, noun.talker_11,
+            self.model.results.append((noun.name, noun.variability, noun.novel_talker,
                 spelling, self.production_spelling_is_correct))
         except StopIteration:
             print('Post-test production module finished')
@@ -463,7 +459,7 @@ class PostTestPerceptionInstructions(ttk.Frame):
         self.ImageBox.configure(image = photo)
         self.ImageBox.image=photo
         
-        wave_obj = sa.WaveObject.from_wave_file('instructions_audio_files/post_test_perception_instructions.wav')
+        wave_obj = sa.WaveObject.from_wave_file('instructions_audio_files/directions_posttestrecognition.wav')
         play_obj = wave_obj.play()
         # play_obj.wait_done()
 
@@ -511,7 +507,7 @@ class PostTestPerceptionController:
     def set_training_image(self):
         self.noun = 'earth'
         photo = PIL.ImageTk.PhotoImage(PIL.Image.open('earth.jpg')) 
-        audio = 'instructions_audio_files/earth.wav'
+        audio = 'instructions_audio_files/directions_Earth.wav'
         self.view.ImageBox.configure(image = photo)
         self.view.ImageBox.image=photo
         plausible_spellings = ['earth','erth','ert','urth','urt','earthe']
@@ -522,7 +518,7 @@ class PostTestPerceptionController:
     def set_image(self, *args):
         self.noun = next(self.model.nouns)
         photo = PIL.ImageTk.PhotoImage(PIL.Image.open(self.noun.img)) 
-        audio = self.noun.talker_11
+        audio = self.noun.novel_talker
         self.view.ImageBox.configure(image = photo)
         self.view.ImageBox.image=photo
         wrong_spellings = self.model.plausible_spellings_table[self.noun.name].tolist()
