@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """ This is the main program for the phono-ortho-spelling project """
 
 import os, PIL, random
@@ -18,9 +20,11 @@ import pandas as pd
 # Some helper functions
 #==============================================================================
 
-def play_audio(filepath):
+def play_audio(filepath, wait = False):
     wave_obj = sa.WaveObject.from_wave_file(filepath)
     play_obj = wave_obj.play()
+    if wait:
+        play_obj.wait_done()
 
 
 #==============================================================================
@@ -109,17 +113,16 @@ class PretestInstructionsWindow(ttk.Frame):
         super().__init__(parent)
         self.parent, self.controller = parent, controller
 
-        play_audio("instructions_audio_files/directions_pretest.wav")
-        play_audio("instructions_audio_files/directions_pretest.wav")
-
         # Define elements
-        with open('pretest_instructions.txt', 'r') as f: data = f.read()
+        with open('pretest_instructions.txt', 'r') as f:
+            data = f.read()
 
         pretest_instructions = ScrolledText(self, borderwidth=10, 
                 font = "Helvetica", width=40, wrap = tk.WORD)
             
         pretest_instructions.insert(tk.END, data)
         pretest_instructions.grid()
+        play_audio("instructions_audio_files/directions_pretest.wav")
 
         self.continue_button = ttk.Button(self, text = "Continue",
                 command = self.continue_command)
@@ -382,11 +385,11 @@ class PostTestProductionInstructions(ttk.Frame):
         # Define the elements
         self.ImageBox = ttk.Label(self)
         self.ImageBox.grid()
-        photo = PIL.ImageTk.PhotoImage(PIL.Image.open('fixation_mark.jpg'))
+        photo = PIL.ImageTk.PhotoImage(PIL.Image.open('fixation_images/fixationpic_pencil1.jpg'))
         self.ImageBox.configure(image = photo)
         self.ImageBox.image=photo
         
-        wave_obj = sa.WaveObject.from_wave_file('instructions_audio_files/directions_posttest_production.wav')
+        wave_obj = sa.WaveObject.from_wave_file('instructions_audio_files/directions_posttestproduction.wav')
         play_obj = wave_obj.play()
         # play_obj.wait_done()
 
@@ -414,6 +417,7 @@ class PostTestProductionController:
         self.model = PostTestProductionModel(self.root.assigned_nouns)
         self.view = PostTestProductionView(root.container, self)
         self.view.EnterButton.config(command=self.NextWord)
+        self.NextWord()
         # root.bind('<Return>', self.NextWord)
 
     def start_post_test_production(self):
@@ -455,7 +459,7 @@ class PostTestPerceptionInstructions(ttk.Frame):
         # Define the elements
         self.ImageBox = ttk.Label(self)
         self.ImageBox.grid()
-        photo = PIL.ImageTk.PhotoImage(PIL.Image.open('transition_image.jpg'))
+        photo = PIL.ImageTk.PhotoImage(PIL.Image.open('fixation_images/fixationpic_pencil2.jpg'))
         self.ImageBox.configure(image = photo)
         self.ImageBox.image=photo
         
@@ -506,7 +510,7 @@ class PostTestPerceptionController:
 
     def set_training_image(self):
         self.noun = 'earth'
-        photo = PIL.ImageTk.PhotoImage(PIL.Image.open('earth.jpg')) 
+        photo = PIL.ImageTk.PhotoImage(PIL.Image.open('fixation_images/earthpic1.jpg')) 
         audio = 'instructions_audio_files/directions_Earth.wav'
         self.view.ImageBox.configure(image = photo)
         self.view.ImageBox.image=photo
@@ -521,7 +525,7 @@ class PostTestPerceptionController:
         audio = self.noun.novel_talker
         self.view.ImageBox.configure(image = photo)
         self.view.ImageBox.image=photo
-        wrong_spellings = self.model.plausible_spellings_table[self.noun.name].tolist()
+        wrong_spellings = self.model.plausible_spellings_table[self.noun.name.lower()].tolist()
         plausible_spellings = [self.noun.name]
         if not self.noun.production_spelling_is_correct:
             plausible_spellings.append(self.noun.production_spelling)
@@ -584,6 +588,8 @@ class MainApplication(tk.Tk):
         self.container = ttk.Frame(self, height = 300, width = 400)
         self.container.grid()
         self.show_login_window()
+        self.examiner = 'default_examiner'
+        self.participant_code = 'default_participant_code'
         self.assigned_nouns = assign_nouns(short_nouns, long_nouns)
     def show_login_window(self):
         self.LoginWindow = LoginWindow(self.container, self)
