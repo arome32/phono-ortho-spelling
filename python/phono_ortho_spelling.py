@@ -1,6 +1,35 @@
 #!/usr/bin/env python
 
-""" This is the main program for the phono-ortho-spelling project """
+""" This is the main program for the phono-ortho-spelling project.
+
+Structure of the code
+=====================
+
+Each different window in the program is implemented as its own class.
+For modules that contain logic, such as the Pretest, Training, etc., 
+the logic has been decoupled from the visual interface (albeit not
+perfectly). 
+
+For example, for the Pretest module, we have three classes:
+    PretestModel
+    PretestView
+    PretestController
+
+The class PretestModel holds the data and the logic, the class 
+PretestView represents the visual interface and all its components, and
+the PretestController communicates between the two. In an ideal MVC
+architecture, the app should be 'skinnable' - it should be possible to 
+implement an entirely different look for the app without touching the
+core functionality.
+
+A class is a sort of 'blueprint' for creating an object, which can be
+thought of as a collection of data and functions. For example, objects
+of type 'Noun' (which is a class we have defined in this program) have
+attributes such as 'name', 'length', 'img', 'audios', etc. These 
+data attributes can be of different types - 'name' is a string,
+'length' is an integer, etc.
+
+"""
 
 import os, PIL, random
 from os.path import normpath
@@ -35,7 +64,7 @@ class Noun(object):
     def __init__(self, name: str, length: int):
         self.name = name
         self.length = length
-        self.img = f"Stimuli/Active/{self.name}/pic_{self.name}.jpg"
+        self.img = f"Stimuli/Active/{self.name}/pic_{self.name.lower()}.jpg"
         self.audios = glob(f"Stimuli/Active/{self.name}/*.wav")
         random.shuffle(self.audios)
         self.novel_talker = f"Stimuli/Active/novel_talker/speaker_9c_{name.lower()}.wav"
@@ -47,29 +76,17 @@ class Noun(object):
 
 nouns = {}
 
-nouns['short'] = [
-        'dynein',
-        'purine',
-        'isotope',
-        'reducer',
-        'kinesin',
-        'tertiary',
-        'eukaryote',
-        'oxidizer',
-        ]
+df = pd.read_csv('word_list.csv')
 
-nouns['long'] = [
-    'amphipathic',
-    'cytoplasm',
-    'hypertonic',
-    'peroxisome',
-    'chemiosmotic',
-    ]
+nouns['short'] = df[df['phonemes'] >= 9]['Word'].tolist()
+nouns['long'] = df[df['phonemes'] <= 8]['Word'].tolist()
 
 short_nouns = [Noun(name.capitalize(),'short') for name in nouns['short']]
 long_nouns = [Noun(name.capitalize(),'long') for name in nouns['long']]
 
 class LoginWindow(ttk.Frame):
+    """ This class implements a Login window for the user, where they
+    can type in the participant code and the examiner number """
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
@@ -146,6 +163,7 @@ class AnyQuestionsWindow(ttk.Frame):
         title.grid(row = 0, columnspan = 3, pady = 5)
         self.continue_button = ttk.Button(self, text = "Continue",
                 command = self.continue_command)
+        self.controller.bind('<Return>',self.continue_command)
         self.continue_button.grid()
 
     def continue_command(self, *args):
@@ -225,7 +243,7 @@ class PretestController:
         """ Do post-processing. Does the participant meet the criteria for 
             the study? """
         # self.root.unbind('<Return>')
-        filename = self.root.participant_code+'_'+self.root.examiner
+        self.root.filename = self.root.participant_code+'_'+self.root.examiner
         if self.model.n_wrong < 4: 
             filename = filename+'_CNM'
             self.root.show_thankyou_screen(False)
@@ -237,10 +255,11 @@ class PretestController:
             # self.root.EndPretestWindow.tkraise()
             # self.root.EndPretestWindow.training_button.grid()
         # Record the words and wher they got them wrong
-        with open(filename+'.txt','w') as f:
+        with open(self.root.filename+'.txt','w') as f:
             for key in self.model.records: 
                 f.write(key+','+str(self.model.records[key][0])+','+
                         str(self.model.records[key][1])+'\n')
+
     def play_noun_audio(self):
         try:
             audiofile = random.choice(self.model.noun.audios)
@@ -385,16 +404,21 @@ class PostTestProductionInstructions(ttk.Frame):
         # Define the elements
         self.ImageBox = ttk.Label(self)
         self.ImageBox.grid()
-        photo = PIL.ImageTk.PhotoImage(PIL.Image.open('fixation_images/fixationpic_pencil1.jpg'))
+        photo = PIL.ImageTk.PhotoImage(
+                PIL.Image.open('fixation_images/fixationpic_pencil1.jpg'))
         self.ImageBox.configure(image = photo)
         self.ImageBox.image=photo
         
-        wave_obj = sa.WaveObject.from_wave_file('instructions_audio_files/directions_posttestproduction.wav')
+        wave_obj = sa.WaveObject.from_wave_file(
+                'instructions_audio_files/directions_posttestproduction.wav')
         play_obj = wave_obj.play()
-        # play_obj.wait_done()
 
         ttk.Button(self, text = 'Ready', 
                 command = self.controller.start_post_test_production).grid()
+        self.controller.bind('<Return>', self.continue_command)
+
+    def continue_command(self, *args):
+        self.controller.start_post_test_production()
 
 class PostTestProductionModel:
     def __init__(self, assigned_nouns):
@@ -408,6 +432,7 @@ class PostTestProductionView(ttk.Frame):
 
         self.SpellingEntry = ttk.Entry(self, width=8)
         self.SpellingEntry.grid(row=1, column=1)
+        self.SpellingEntry.focus()
         self.EnterButton = ttk.Button(self, text = 'Enter')
         self.EnterButton.grid(row=2, column=1)
 
@@ -416,9 +441,9 @@ class PostTestProductionController:
         self.root = root
         self.model = PostTestProductionModel(self.root.assigned_nouns)
         self.view = PostTestProductionView(root.container, self)
-        self.view.EnterButton.config(command=self.NextWord)
         self.NextWord()
-        # root.bind('<Return>', self.NextWord)
+        self.view.EnterButton.config(command=self.test_spelling)
+        root.bind('<Return>', self.test_spelling)
 
     def start_post_test_production(self):
         random.shuffle(self.root.assigned_nouns)
@@ -427,22 +452,25 @@ class PostTestProductionController:
             play_obj = wave_obj.play()
             play_obj.wait_done()
 
-    def NextWord(self, *args):
+    def test_spelling(self, *args):
         spelling = self.view.SpellingEntry.get()
         self.view.SpellingEntry.delete(0, 'end')
+        if spelling.lower() == self.noun.name.lower():
+            print('Correct spelling!')
+            self.production_spelling_is_correct = True
+        else:
+            print('Incorrect spelling!')
+            self.production_spelling_is_correct = False
+        self.noun.production_spelling = spelling
+        self.model.results.append((self.noun.name, self.noun.variability, self.noun.novel_talker,
+            spelling, self.production_spelling_is_correct))
+        self.NextWord()
+
+    def NextWord(self, *args):
         try:
-            noun = next(self.model.nouns)
-            play_audio(noun.novel_talker)
-            print(noun.name)
-            if spelling.lower() == noun.name.lower():
-                print('Correct spelling!')
-                self.production_spelling_is_correct = True
-            else:
-                print('Incorrect spelling!')
-                self.production_spelling_is_correct = False
-            noun.production_spelling = spelling
-            self.model.results.append((noun.name, noun.variability, noun.novel_talker,
-                spelling, self.production_spelling_is_correct))
+            self.noun = next(self.model.nouns)
+            play_audio(self.noun.novel_talker)
+            print(self.noun.name)
         except StopIteration:
             print('Post-test production module finished')
             with open(str(self.root.LoginWindow.participant_code)+'_production_results.txt','w') as f:
@@ -469,6 +497,10 @@ class PostTestPerceptionInstructions(ttk.Frame):
 
         ttk.Button(self, text = 'Ready', 
                 command = self.controller.start_post_test_perception).grid()
+        self.controller.bind('<Return>', self.proceed_to_post_test_perception)
+
+    def proceed_to_post_test_perception(self, *args): 
+        self.controller.start_post_test_perception()
 
 class PostTestPerceptionModel:
     def __init__(self, assigned_nouns):
@@ -500,6 +532,9 @@ class PostTestPerceptionView(ttk.Frame):
         self.spellings[4].grid(row = 4, column = 0)
         self.spellings[5].grid(row = 4, column = 1)
 
+        self.ready_button = ttk.Button(self, text="Ready",
+                command=self.controller.set_first_image)
+
 
 class PostTestPerceptionController:
     def __init__(self, root):
@@ -514,10 +549,16 @@ class PostTestPerceptionController:
         audio = 'instructions_audio_files/directions_Earth.wav'
         self.view.ImageBox.configure(image = photo)
         self.view.ImageBox.image=photo
+        play_audio(audio)
         plausible_spellings = ['earth','erth','ert','urth','urt','earthe']
         random.shuffle(plausible_spellings)
         for i in range(0,6):
             self.view.spellings[i].config(text = plausible_spellings[i])
+
+    def set_first_image(self, *args):
+        """ Set the first image and remove the 'Ready' button """
+        self.set_image()
+        self.view.ready_button.destroy()
 
     def set_image(self, *args):
         self.noun = next(self.model.nouns)
@@ -533,7 +574,6 @@ class PostTestPerceptionController:
         else:
             plausible_spellings.append(wrong_spellings)
         random.shuffle(plausible_spellings)
-        print(plausible_spellings)
         for i in range(0,6):
             self.view.spellings[i].config(text = plausible_spellings[i])
         self.root.after(500, self.play_image_audio, audio)
@@ -544,11 +584,13 @@ class PostTestPerceptionController:
         if self.noun == 'earth':
             if selected_spelling == 'earth':
                 spelling_is_correct = True
+                play_audio('instructions_audio_files/directions_goodnowlets.wav')
                 print('correct spelling')
             else:
                 spelling_is_correct = False
+                play_audio('instructions_audio_files/directions_oops.wav')
                 print('wrong spelling')
-            self.set_image()
+            self.view.ready_button.grid(row = 5, columnspan = 2)
 
         else:
             if self.noun.name == selected_spelling:
