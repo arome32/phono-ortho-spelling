@@ -77,7 +77,7 @@ class Noun(object):
 
 nouns = {}
 
-df = pd.read_csv('word_list.csv')
+df = pd.read_csv('word_list.csv', encoding = 'utf-8')
 
 nouns['short'] = df[df['phonemes'] >= 9]['Word'].tolist()
 nouns['long'] = df[df['phonemes'] <= 8]['Word'].tolist()
