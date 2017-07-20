@@ -71,6 +71,7 @@ class Noun(object):
         self.production_spelling = None
         self.production_spelling_is_correct = None
         self.perception_spelling = None
+        self.variability = None
 
 # List of nouns, divided into short and long nouns
 
@@ -171,27 +172,49 @@ class AnyQuestionsWindow(ttk.Frame):
 
 class PretestModel:
     def __init__(self, controller):
-        self.controller, self.nouns = controller, short_nouns + long_nouns
+        self.controller = controller
+        self.nouns = self.controller.root.assigned_nouns
         random.shuffle(self.nouns)
         self.nouns = iter(self.nouns) ; self.noun = next(self.nouns)
         self.records, self.n_wrong = {}, 0
+        self.results = pd.DataFrame(columns = ['Word', 'Length', 'T/F',
+            'Participant\'s Answer', 'Condition'])
+
     def NextNoun(self, spelling):
         try:
             if spelling.lower() == self.noun.name.lower():
-                print('correct spelling!')
-                self.records[self.noun.name] = (spelling, self.noun.length, 1)
+                self.results.append(
+                    {
+                        'Word' : self.noun.name,
+                        'Length' : self.noun.length,
+                        'T/F' : 1,
+                        'Participant\'s Answer' : spelling,
+                        'Condition' : self.noun.variability,
+                    }, ignore_index = True
+                )
+                # self.records[self.noun.name] = (spelling, self.noun.length, 1)
                 self.noun = next(self.nouns)
             else:
-                print('incorrect spelling!')
-                self.records[self.noun.name] = (spelling, self.noun.length, 0)
+                self.results.append(
+                    {
+                        'Word' : self.noun.name,
+                        'Length' : self.noun.length,
+                        'T/F' : 1,
+                        'Participant\'s Answer' : spelling,
+                        'Condition' : self.noun.variability,
+                    }, ignore_index = True
+                )
+                # self.records[self.noun.name] = (spelling, self.noun.length, 0)
                 self.n_wrong = self.n_wrong + 1
                 if self.n_wrong > 4:
                     print('condition met!')
                     self.controller.do_post_processing()
                     return
-                try: self.noun = next(self.nouns)
+                try: 
+                    self.noun = next(self.nouns)
                 except StopIteration:
-                    try: self.noun = next(self.nouns)
+                    try: 
+                        self.noun = next(self.nouns)
                     except StopIteration:
                         print('done with iteration!')
                         self.controller.do_post_processing()
@@ -221,7 +244,8 @@ class PretestView(ttk.Frame):
 
 class PretestController:
     def __init__(self, root):
-        self.model, self.root = PretestModel(self), root
+        self.root = root
+        self.model = PretestModel(self)
         self.view = PretestView(root.container, self)
         self.view.set_image(self.model.noun)
         self.view.EnterButton.config(command=self.NextImage)
@@ -244,9 +268,14 @@ class PretestController:
             the study? """
         # self.root.unbind('<Return>')
         self.root.filename = self.root.participant_code+'_'+self.root.examiner
-        if self.model.n_wrong < 4: 
-            filename = filename+'_CNM'
+        self.root.writer = pd.ExcelWriter(self.root.filename+'.xlsx')
+        self.model.results.to_excel(self.root.writer, 'Pretest')
+        print(self.model.results)
+
+        if self.model.n_wrong > 4: 
             self.root.show_thankyou_screen(False)
+            self.root.writer.save()
+            os.rename(self.root.filename+'.xlsx',self.root.filename+'_CNM.xlsx')
         else:
             print('else')
             self.root.show_thankyou_screen(True)
@@ -255,10 +284,11 @@ class PretestController:
             # self.root.EndPretestWindow.tkraise()
             # self.root.EndPretestWindow.training_button.grid()
         # Record the words and wher they got them wrong
-        with open(self.root.filename+'.txt','w') as f:
-            for key in self.model.records: 
-                f.write(key+','+str(self.model.records[key][0])+','+
-                        str(self.model.records[key][1])+'\n')
+       
+        # with open(self.root.filename+'.txt','w') as f:
+            # for key in self.model.records: 
+                # f.write(key+','+str(self.model.records[key][0])+','+
+                        # str(self.model.records[key][1])+'\n')
 
     def play_noun_audio(self):
         try:
@@ -328,8 +358,6 @@ def assign_nouns(short_nouns, long_nouns):
     hi_variability = hi_variability_short+hi_variability_long
     lo_variability = lo_variability_short+lo_variability_long
 
-    print([noun.name for noun in hi_variability])
-    print([noun.name for noun in lo_variability])
     # Create and set the 'variability' parameter for the noun
     for noun in hi_variability:
         noun.variability = "high"
@@ -633,6 +661,7 @@ class MainApplication(tk.Tk):
         self.examiner = 'default_examiner'
         self.participant_code = 'default_participant_code'
         self.assigned_nouns = assign_nouns(short_nouns, long_nouns)
+        self.writer = None
     def show_login_window(self):
         self.LoginWindow = LoginWindow(self.container, self)
         self.LoginWindow.grid(row = 0, column = 0, sticky = "nsew")
@@ -684,6 +713,7 @@ class MainApplication(tk.Tk):
     def show_final_screen(self):
         self.FinalScreen = FinalScreen(self.container, self)
         self.FinalScreen.grid(row = 0, column = 0, sticky = "nsew")
+        self.writer.save()
 
 if __name__=="__main__":
     app = MainApplication()
