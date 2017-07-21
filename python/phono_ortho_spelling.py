@@ -272,7 +272,7 @@ class PretestController:
         self.model.results.to_excel(self.root.writer, 'Pretest')
         print(self.model.results)
 
-        if self.model.n_wrong > 4: 
+        if self.model.n_wrong < 4: 
             self.root.show_thankyou_screen(False)
             self.root.writer.save()
             os.rename(self.root.filename+'.xlsx',self.root.filename+'_CNM.xlsx')
