@@ -177,33 +177,29 @@ class PretestModel:
         random.shuffle(self.nouns)
         self.nouns = iter(self.nouns) ; self.noun = next(self.nouns)
         self.records, self.n_wrong = {}, 0
+        self.dicts = []
         self.results = pd.DataFrame(columns = ['Word', 'Length', 'T/F',
-            'Participant\'s Answer', 'Condition'])
+            'ParticipantAnswer', 'Condition'])
 
     def NextNoun(self, spelling):
+        mydict = {
+                'Word' : self.noun.name,
+                'Length' : self.noun.length,
+                'ParticipantAnswer' : spelling,
+                'Condition' : self.noun.variability,
+                }
         try:
             if spelling.lower() == self.noun.name.lower():
-                self.results.append(
-                    {
-                        'Word' : self.noun.name,
-                        'Length' : self.noun.length,
-                        'T/F' : 1,
-                        'Participant\'s Answer' : spelling,
-                        'Condition' : self.noun.variability,
-                    }, ignore_index = True
-                )
+                mydict['T/F'] = 1
+                self.dicts.append(mydict)
+                # self.results.append(series, ignore_index = True)
                 # self.records[self.noun.name] = (spelling, self.noun.length, 1)
                 self.noun = next(self.nouns)
             else:
-                self.results.append(
-                    {
-                        'Word' : self.noun.name,
-                        'Length' : self.noun.length,
-                        'T/F' : 1,
-                        'Participant\'s Answer' : spelling,
-                        'Condition' : self.noun.variability,
-                    }, ignore_index = True
-                )
+                mydict['T/F'] = 0
+                self.dicts.append(mydict)
+                # series = pd.Series(mydict)
+                # self.results.append(series, ignore_index = True)
                 # self.records[self.noun.name] = (spelling, self.noun.length, 0)
                 self.n_wrong = self.n_wrong + 1
                 if self.n_wrong > 4:
@@ -267,10 +263,11 @@ class PretestController:
         """ Do post-processing. Does the participant meet the criteria for 
             the study? """
         # self.root.unbind('<Return>')
+        # print(self.model.results)
+        self.model.results = pd.DataFrame(self.model.dicts)
         self.root.filename = self.root.participant_code+'_'+self.root.examiner
         self.root.writer = pd.ExcelWriter(self.root.filename+'.xlsx')
         self.model.results.to_excel(self.root.writer, 'Pretest')
-        print(self.model.results)
 
         if self.model.n_wrong < 4: 
             self.root.show_thankyou_screen(False)
