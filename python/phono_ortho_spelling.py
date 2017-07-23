@@ -178,14 +178,12 @@ class PretestModel:
         self.nouns = iter(self.nouns) ; self.noun = next(self.nouns)
         self.records, self.n_wrong = {}, 0
         self.dicts = []
-        self.results = pd.DataFrame(columns = ['Word', 'Length', 'T/F',
-            'ParticipantAnswer', 'Condition'])
 
     def NextNoun(self, spelling):
         mydict = {
-                'Word' : self.noun.name,
-                'Length' : self.noun.length,
-                'ParticipantAnswer' : spelling,
+                'word' : self.noun.name,
+                'length' : self.noun.length,
+                'Participant Answer' : spelling,
                 'Condition' : self.noun.variability,
                 }
         try:
@@ -254,7 +252,8 @@ class PretestController:
         spelling = self.view.SpellingEntry.get()
         self.view.SpellingEntry.delete(0, 'end')
         self.model.NextNoun(spelling)
-        if self.model.n_wrong < 5: self.play_noun_audio()
+        if self.model.n_wrong < 5:
+            self.play_noun_audio()
         print(self.model.noun.name)
         self.view.set_image(self.model.noun)
         self.view.ImageBox.grid(row=0,columnspan=2,padx=10,pady=10,sticky="nsew")
@@ -264,7 +263,8 @@ class PretestController:
             the study? """
         # self.root.unbind('<Return>')
         # print(self.model.results)
-        self.model.results = pd.DataFrame(self.model.dicts)
+        self.model.results = pd.DataFrame(self.model.dicts,
+                columns = ['Word', 'T/F', 'Participant Answer', 'Condition'])
         self.root.filename = self.root.participant_code+'_'+self.root.examiner
         self.root.writer = pd.ExcelWriter(self.root.filename+'.xlsx')
         self.model.results.to_excel(self.root.writer, 'Pretest')
@@ -277,15 +277,6 @@ class PretestController:
             print('else')
             self.root.show_thankyou_screen(True)
             self.root.end_pretest()
-            # self.root.EndPretestWindow.grid()
-            # self.root.EndPretestWindow.tkraise()
-            # self.root.EndPretestWindow.training_button.grid()
-        # Record the words and wher they got them wrong
-       
-        # with open(self.root.filename+'.txt','w') as f:
-            # for key in self.model.records: 
-                # f.write(key+','+str(self.model.records[key][0])+','+
-                        # str(self.model.records[key][1])+'\n')
 
     def play_noun_audio(self):
         try:
@@ -448,7 +439,7 @@ class PostTestProductionInstructions(ttk.Frame):
 class PostTestProductionModel:
     def __init__(self, assigned_nouns):
         self.nouns = iter(assigned_nouns)
-        self.results = []
+        self.result_dicts = []
 
 class PostTestProductionView(ttk.Frame):
     def __init__(self, parent, controller):
@@ -461,6 +452,14 @@ class PostTestProductionView(ttk.Frame):
         self.EnterButton = ttk.Button(self, text = 'Enter')
         self.EnterButton.grid(row=2, column=1)
 
+    def set_image(self,noun):
+        self.noun = noun
+        photo = PIL.ImageTk.PhotoImage(PIL.Image.open(self.noun.img))
+        self.ImageBox = ttk.Label(self, image = photo)
+        self.ImageBox.image=photo
+        self.ImageBox.grid(row=0,columnspan=2,
+                           padx=10,pady=10,sticky="nsew")
+
 class PostTestProductionController:
     def __init__(self, root):
         self.root = root
@@ -469,6 +468,7 @@ class PostTestProductionController:
         self.NextWord()
         self.view.EnterButton.config(command=self.test_spelling)
         root.bind('<Return>', self.test_spelling)
+        self.view.set_image(self.noun)
 
     def start_post_test_production(self):
         random.shuffle(self.root.assigned_nouns)
@@ -479,26 +479,38 @@ class PostTestProductionController:
 
     def test_spelling(self, *args):
         spelling = self.view.SpellingEntry.get()
+        mydict = {
+                'Word' : self.noun.name,
+                'Length' : self.noun.length,
+                'Participant Answer' : spelling,
+                'Condition' : self.noun.variability,
+                }
         self.view.SpellingEntry.delete(0, 'end')
         if spelling.lower() == self.noun.name.lower():
-            print('Correct spelling!')
+            mydict['T/F'] = 1
+            self.model.result_dicts.append(mydict)
             self.production_spelling_is_correct = True
         else:
-            print('Incorrect spelling!')
+            mydict['T/F'] = 0
+            self.model.result_dicts.append(mydict)
             self.production_spelling_is_correct = False
         self.noun.production_spelling = spelling
-        self.model.results.append((self.noun.name, self.noun.variability, self.noun.novel_talker,
-            spelling, self.production_spelling_is_correct))
         self.NextWord()
 
     def NextWord(self, *args):
         try:
             self.noun = next(self.model.nouns)
+            self.view.set_image(self.noun)
             play_audio(self.noun.novel_talker)
             print(self.noun.name)
         except StopIteration:
             print('Post-test production module finished')
-            with open(str(self.root.LoginWindow.participant_code)+'_production_results.txt','w') as f:
+            self.model.results = pd.DataFrame(self.model.result_dicts,
+                    columns = ['Word', 'T/F', 'Participant Answer', 'Condition'])
+            self.model.results.to_excel(self.root.writer, 'Post-Test Production')
+
+            with open(str(self.root.LoginWindow.participant_code)\
+                    +'_production_results.txt','w') as f:
                 for word in self.model.results:
                     f.write(str(word)+'\n')
             self.root.show_post_test_perception_instructions()
@@ -512,11 +524,13 @@ class PostTestPerceptionInstructions(ttk.Frame):
         # Define the elements
         self.ImageBox = ttk.Label(self)
         self.ImageBox.grid()
-        photo = PIL.ImageTk.PhotoImage(PIL.Image.open('fixation_images/fixationpic_pencil2.jpg'))
+        photo = PIL.ImageTk.PhotoImage(PIL.Image.open('fixation_images'
+                                        '/fixationpic_pencil2.jpg'))
         self.ImageBox.configure(image = photo)
         self.ImageBox.image=photo
         
-        wave_obj = sa.WaveObject.from_wave_file('instructions_audio_files/directions_posttestrecognition.wav')
+        wave_obj = sa.WaveObject.from_wave_file('instructions_audio_files/'
+                                        'directions_posttestrecognition.wav')
         play_obj = wave_obj.play()
         # play_obj.wait_done()
 
@@ -532,8 +546,9 @@ class PostTestPerceptionModel:
         random.shuffle(assigned_nouns)
         self.nouns = iter(assigned_nouns)
         self.list_of_words = []
-        self.plausible_spellings_table = pd.read_csv('Stimuli/plausible_spellings.csv',
-                index_col=0, header = None).T
+        self.plausible_spellings_table = pd.read_csv('Stimuli/'
+            'plausible_spellings.csv', index_col=0, header = None).T
+        self.results = []
 
 class PostTestPerceptionView(ttk.Frame):
     def __init__(self, parent, controller):
@@ -542,8 +557,6 @@ class PostTestPerceptionView(ttk.Frame):
         self.controller.root.title('Post-Test Perception')
         self.ImageBox = ttk.Label(self)
         self.ImageBox.grid(row = 0, columnspan = 2)
-        # self.EnterButton = ttk.Button(self, text = 'Next Word')
-        # self.EnterButton.grid(row=8, columnspan=2)
         self.spellings = [tk.Label(self, text = "spelling_"+str(i), height = 10,
             width = 30, borderwidth=1, relief="solid") for i in range(0,6)]
         for label in self.spellings:
@@ -570,15 +583,16 @@ class PostTestPerceptionController:
 
     def set_training_image(self):
         self.noun = 'earth'
-        photo = PIL.ImageTk.PhotoImage(PIL.Image.open('fixation_images/earthpic1.jpg')) 
+        photo = PIL.ImageTk.PhotoImage(PIL.Image.open('fixation_images/'
+            'earthpic1.jpg')) 
         audio = 'instructions_audio_files/directions_Earth.wav'
         self.view.ImageBox.configure(image = photo)
         self.view.ImageBox.image=photo
         play_audio(audio)
-        plausible_spellings = ['earth','erth','ert','urth','urt','earthe']
-        random.shuffle(plausible_spellings)
+        self.model.plausible_spellings = ['earth','erth','ert','urth','urt','earthe']
+        random.shuffle(self.model.plausible_spellings)
         for i in range(0,6):
-            self.view.spellings[i].config(text = plausible_spellings[i])
+            self.view.spellings[i].config(text = self.model.plausible_spellings[i])
 
     def set_first_image(self, *args):
         """ Set the first image and remove the 'Ready' button """
@@ -591,50 +605,56 @@ class PostTestPerceptionController:
         audio = self.noun.novel_talker
         self.view.ImageBox.configure(image = photo)
         self.view.ImageBox.image=photo
-        wrong_spellings = self.model.plausible_spellings_table[self.noun.name.lower()].tolist()
-        plausible_spellings = [self.noun.name]
+        wrong_spellings = self.model.plausible_spellings_table[
+                self.noun.name.lower()].tolist()
+        self.model.plausible_spellings = [self.noun.name]
         if not self.noun.production_spelling_is_correct:
-            plausible_spellings.append(self.noun.production_spelling)
-            plausible_spellings+= random.sample(wrong_spellings, 4)
+            self.model.plausible_spellings.append(self.noun.production_spelling)
+            self.model.plausible_spellings+= random.sample(wrong_spellings, 4)
         else:
-            plausible_spellings.append(wrong_spellings)
-        random.shuffle(plausible_spellings)
+            self.model.plausible_spellings.append(wrong_spellings)
+        random.shuffle(self.model.plausible_spellings)
         for i in range(0,6):
-            self.view.spellings[i].config(text = plausible_spellings[i])
+            self.view.spellings[i].config(
+                    text = self.model.plausible_spellings[i].lower())
         self.root.after(500, self.play_image_audio, audio)
 
     def check_spelling(self, label):
+        mydict = {}
         selected_spelling = label.widget.cget("text")
+        mydict['Participant Answer'] = selected_spelling
+        mydict['Choices'] = ', '.join(self.model.plausible_spellings)
 
         if self.noun == 'earth':
+            mydict['Word'] = 'Earth'
+            mydict['Condition'] = 'short'
             if selected_spelling == 'earth':
-                spelling_is_correct = True
+                mydict['T/F'] = 1
                 play_audio('instructions_audio_files/directions_goodnowlets.wav')
-                print('correct spelling')
             else:
-                spelling_is_correct = False
+                mydict['T/F'] = 0
                 play_audio('instructions_audio_files/directions_oops.wav')
-                print('wrong spelling')
+            self.model.results.append(mydict)
             self.view.ready_button.grid(row = 5, columnspan = 2)
 
         else:
+            mydict['Word'] = self.noun.name
+            mydict['Condition'] = self.noun.variability
             if self.noun.name == selected_spelling:
-                spelling_is_correct = True
-                print('correct spelling')
+                mydict['T/F'] = 1
             else:
-                spelling_is_correct = False
-                print('wrong spelling')
+                mydict['T/F'] = 0
+            self.model.results.append(mydict)
 
             try:
-                self.model.list_of_words.append((self.noun.name, 
-                    self.noun.variability, self.noun.production_spelling,
-                    selected_spelling, spelling_is_correct))
                 self.set_image()
             except StopIteration:
                 print('post test perception finished')
-                with open(str(self.root.LoginWindow.participant_code)+'_perception_results.txt','w') as f:
-                    for word in self.model.list_of_words:
-                        f.write(str(word)+'\n')
+                self.model.results_dataframe = pd.DataFrame(self.model.results,
+                        columns = ['Word', 'T/F', 'Participant Answer', 
+                                   'Choices', 'Condition'])
+                self.model.results_dataframe.to_excel(self.root.writer,
+                        'Post-Test Perception')
                 self.root.show_final_screen()
 
     def play_image_audio(self, filepath):
