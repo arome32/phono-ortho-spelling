@@ -556,8 +556,9 @@ class PostTestPerceptionView(ttk.Frame):
         self.controller.root.title('Post-Test Perception')
         self.ImageBox = ttk.Label(self)
         self.ImageBox.grid(row = 0, columnspan = 2)
-        self.spellings = [tk.Label(self, text = "spelling_"+str(i), height = 3,
-            width = 9, borderwidth=1, relief="solid") for i in range(0,6)]
+        self.spellings = [tk.Label(self, text = "spelling_"+str(i), height = 5,
+            width = 25, borderwidth=1, relief="solid", font = ('Helvetica', '20'))
+            for i in range(0,6)]
         for label in self.spellings:
             label.bind("<Button-1>",self.controller.check_spelling, label)
 
