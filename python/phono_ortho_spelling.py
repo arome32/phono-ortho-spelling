@@ -39,7 +39,7 @@ from glob import glob
 from PIL import Image, ImageTk
 import itertools
 import typing
-from typing import List
+from typing import List, Tuple
 import tkinter as tk
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
@@ -556,8 +556,8 @@ class PostTestPerceptionView(ttk.Frame):
         self.controller.root.title('Post-Test Perception')
         self.ImageBox = ttk.Label(self)
         self.ImageBox.grid(row = 0, columnspan = 2)
-        self.spellings = [tk.Label(self, text = "spelling_"+str(i), height = 10,
-            width = 30, borderwidth=1, relief="solid") for i in range(0,6)]
+        self.spellings = [tk.Label(self, text = "spelling_"+str(i), height = 3,
+            width = 9, borderwidth=1, relief="solid") for i in range(0,6)]
         for label in self.spellings:
             label.bind("<Button-1>",self.controller.check_spelling, label)
 
