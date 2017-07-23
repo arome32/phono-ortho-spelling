@@ -145,7 +145,8 @@ class PretestInstructionsWindow(ttk.Frame):
         self.continue_button = ttk.Button(self, text = "Continue",
                 command = self.continue_command)
         replay_button = ttk.Button(self, text = "Replay test words",
-         command=lambda: play_audio("instructions_audio_files/directions_pretest.wav"))
+            command = lambda: play_audio("instructions_audio_files/",
+                                         "directions_pretest.wav"))
         self.controller.bind('<Return>',self.continue_command)
         self.continue_button.grid()
 
@@ -180,26 +181,21 @@ class PretestModel:
         self.dicts = []
 
     def NextNoun(self, spelling):
-        mydict = {
-                'word' : self.noun.name,
-                'length' : self.noun.length,
-                'Participant Answer' : spelling,
-                'Condition' : self.noun.variability,
-                }
+        mydict = {  
+                    'Word' : self.noun.name,
+                    'Length' : self.noun.length,
+                    'Participant Answer' : spelling,
+                    'Condition' : self.noun.variability,
+                 }
         try:
             if spelling.lower() == self.noun.name.lower():
                 mydict['T/F'] = 1
                 self.dicts.append(mydict)
-                # self.results.append(series, ignore_index = True)
-                # self.records[self.noun.name] = (spelling, self.noun.length, 1)
                 self.noun = next(self.nouns)
             else:
                 mydict['T/F'] = 0
                 self.dicts.append(mydict)
-                # series = pd.Series(mydict)
-                # self.results.append(series, ignore_index = True)
-                # self.records[self.noun.name] = (spelling, self.noun.length, 0)
-                self.n_wrong = self.n_wrong + 1
+                self.n_wrong += 1
                 if self.n_wrong > 4:
                     print('condition met!')
                     self.controller.do_post_processing()
@@ -228,7 +224,7 @@ class PretestView(ttk.Frame):
         self.SpellingEntry = ttk.Entry(self, width=8)
         self.SpellingEntry.grid(row=1, column=1)
 
-    def set_image(self,noun):
+    def set_image(self, noun):
         self.noun = noun
         photo = PIL.ImageTk.PhotoImage(PIL.Image.open(self.noun.img))
         self.ImageBox = ttk.Label(self, image = photo)
@@ -246,23 +242,25 @@ class PretestController:
         root.bind('<Return>', self.NextImage)
         self.view.SpellingEntry.focus()
         self.play_noun_audio()
-        print(self.model.noun.name)
 
     def NextImage(self, *args):
         spelling = self.view.SpellingEntry.get()
         self.view.SpellingEntry.delete(0, 'end')
-        self.model.NextNoun(spelling)
-        if self.model.n_wrong < 5:
-            self.play_noun_audio()
-        print(self.model.noun.name)
-        self.view.set_image(self.model.noun)
-        self.view.ImageBox.grid(row=0,columnspan=2,padx=10,pady=10,sticky="nsew")
+
+        if len(spelling) > 0 and spelling.isalpha():
+            self.view.SpellingEntry.delete(0, 'end')
+            self.model.NextNoun(spelling)
+            if self.model.n_wrong < 5:
+                self.play_noun_audio()
+            print(self.model.noun.name)
+            self.view.set_image(self.model.noun)
+            self.view.ImageBox.grid(row=0, columnspan=2, padx=10,
+                                    pady=10, sticky="nsew")
+
 
     def do_post_processing(self):
         """ Do post-processing. Does the participant meet the criteria for 
             the study? """
-        # self.root.unbind('<Return>')
-        # print(self.model.results)
         self.model.results = pd.DataFrame(self.model.dicts,
                 columns = ['Word', 'T/F', 'Participant Answer', 'Condition'])
         self.root.filename = self.root.participant_code+'_'+self.root.examiner
@@ -329,7 +327,7 @@ class TrainingInstructionsWindow(ttk.Frame):
     def proceed_to_training(self, *args): 
         self.controller.start_training()
 
-def splitlist(xs: List) -> List:
+def splitList(xs: List) -> Tuple[List,List]:
     """ Randomly shuffle elements of list into two sublists."""
     random.shuffle(xs)
     length = len(xs)//2
@@ -340,8 +338,8 @@ def assign_nouns(short_nouns, long_nouns):
     random.shuffle(long_nouns)
 
     # split the lists into high and low variability sublists
-    hi_variability_short, lo_variability_short = splitlist(short_nouns)
-    hi_variability_long, lo_variability_long = splitlist(long_nouns)
+    hi_variability_short, lo_variability_short = splitList(short_nouns)
+    hi_variability_long, lo_variability_long = splitList(long_nouns)
 
     hi_variability = hi_variability_short+hi_variability_long
     lo_variability = lo_variability_short+lo_variability_long
@@ -479,23 +477,24 @@ class PostTestProductionController:
 
     def test_spelling(self, *args):
         spelling = self.view.SpellingEntry.get()
-        mydict = {
-                'Word' : self.noun.name,
-                'Length' : self.noun.length,
-                'Participant Answer' : spelling,
-                'Condition' : self.noun.variability,
-                }
         self.view.SpellingEntry.delete(0, 'end')
-        if spelling.lower() == self.noun.name.lower():
-            mydict['T/F'] = 1
-            self.model.result_dicts.append(mydict)
-            self.production_spelling_is_correct = True
-        else:
-            mydict['T/F'] = 0
-            self.model.result_dicts.append(mydict)
-            self.production_spelling_is_correct = False
-        self.noun.production_spelling = spelling
-        self.NextWord()
+        if len(spelling) > 0 and spelling.isalpha():
+            mydict = {
+                        'Word' : self.noun.name,
+                        'Length' : self.noun.length,
+                        'Participant Answer' : spelling,
+                        'Condition' : self.noun.variability,
+                        }
+            if spelling.lower() == self.noun.name.lower():
+                mydict['T/F'] = 1
+                self.model.result_dicts.append(mydict)
+                self.production_spelling_is_correct = True
+            else:
+                mydict['T/F'] = 0
+                self.model.result_dicts.append(mydict)
+                self.production_spelling_is_correct = False
+            self.noun.production_spelling = spelling
+            self.NextWord()
 
     def NextWord(self, *args):
         try:
