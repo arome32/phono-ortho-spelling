@@ -280,7 +280,8 @@ class PretestController:
         try:
             audiofile = random.choice(self.model.noun.audios)
             play_audio(audiofile)
-        except: pass
+        except: 
+            pass
 
 class EndPretestWindow(ttk.Frame):
     def __init__(self, parent, controller):
@@ -359,7 +360,7 @@ class TrainingModel:
     def __init__(self, controller):
         self.controller = controller
         self.nouns = self.controller.root.assigned_nouns
-        self.list_of_words = []
+        self.results = []
 
     def myGenerator(self):
         for noun in self.nouns:
@@ -393,11 +394,19 @@ class TrainingController:
     def set_image(self):
         try:
             noun, photo, audio = next(self.iterator) 
-            self.model.list_of_words.append((noun.name, audio, noun.variability))
+            mydict = {
+                    'Word' : noun.name,
+                    'Talker' : (audio.split('.')[0]).split('_')[1],
+                    'Variability' : noun.variability,
+                    }
+            self.model.results.append(mydict)
             self.view.ImageBox.configure(image = photo)
             self.view.ImageBox.image=photo
             self.root.after(1000, self.play_image_audio, audio)
         except StopIteration:
+            df = pd.DataFrame(self.model.results, 
+                    columns = ['Word', 'Talker', 'Variability'])
+            df.to_excel(self.root.writer, 'Training')
             self.root.show_post_test_production_instructions()
             pass
 
