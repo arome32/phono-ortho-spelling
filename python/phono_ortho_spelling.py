@@ -319,8 +319,14 @@ class TrainingInstructionsWindow(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.parent, self.controller = parent, controller
+        with open('training_instructions.txt', 'r') as f:
+            data = f.read()
         self.controller.bind('<Return>',self.proceed_to_training)
         ttk.Label(self, text = "Training instructions").grid()
+        training_instructions = ScrolledText(self, borderwidth=10, 
+                font = "Helvetica", width=40, wrap = tk.WORD)
+        training_instructions.insert(tk.END, data)
+        training_instructions.grid()
         ttk.Button(self, text = 'Ready', 
                 command = self.controller.start_training).grid()
         play_audio(normpath("instructions_audio_files/directions_training.wav"))
@@ -565,8 +571,8 @@ class PostTestPerceptionView(ttk.Frame):
         self.controller.root.title('Post-Test Perception')
         self.ImageBox = ttk.Label(self)
         self.ImageBox.grid(row = 0, columnspan = 2)
-        self.spellings = [tk.Label(self, text = "spelling_"+str(i), height = 5,
-            width = 25, borderwidth=1, relief="solid", font = ('Helvetica', '20'))
+        self.spellings = [tk.Label(self, text = "spelling_"+str(i), height = 2,
+            width = 20, borderwidth=1, relief="solid", font = ('Helvetica', '20'))
             for i in range(0,6)]
         for label in self.spellings:
             label.bind("<Button-1>",self.controller.check_spelling, label)
@@ -676,7 +682,8 @@ class FinalScreen(ttk.Frame):
         self.controller = controller
         self.grid(column = 0, row = 0)
         # Define the elements
-        tk.Label(self, text = "Thank you", height = 50, width = 100).grid()
+        tk.Label(self, text = "Thank you", height = 50, width = 100, 
+                font = ("Helvetica", "20")).grid()
 
 class MainApplication(tk.Tk):
     def __init__(self):
