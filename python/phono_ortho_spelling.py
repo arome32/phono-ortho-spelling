@@ -682,7 +682,7 @@ class FinalScreen(ttk.Frame):
         self.controller = controller
         self.grid(column = 0, row = 0)
         # Define the elements
-        tk.Label(self, text = "Thank you", height = 50, width = 100, 
+        tk.Label(self, text = "Thank you", height = 10, width = 20, 
                 font = ("Helvetica", "20")).grid()
 
 class MainApplication(tk.Tk):
