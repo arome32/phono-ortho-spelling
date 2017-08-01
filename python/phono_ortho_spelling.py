@@ -67,7 +67,7 @@ class Noun(object):
         self.img = f"Stimuli/Active/{self.name}/pic_{self.name.lower()}.jpg"
         self.audios = glob(f"Stimuli/Active/{self.name}/*.wav")
         random.shuffle(self.audios)
-        self.novel_talker = f"Stimuli/Active/novel_talker/speaker_9c_{name.lower()}.wav"
+        self.novel_talker = f"Stimuli/pretest_talker/pretest_talker_{name.lower()}.wav"
         self.production_spelling = None
         self.production_spelling_is_correct = None
         self.perception_spelling = None
