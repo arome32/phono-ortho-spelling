@@ -278,7 +278,7 @@ class PretestController:
 
     def play_noun_audio(self):
         try:
-            audiofile = random.choice(self.model.noun.audios)
+            audiofile = self.model.noun.novel_talker
             play_audio(audiofile)
         except: 
             pass
