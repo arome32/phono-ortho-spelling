@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import phono_ortho_spelling as pos
+import pandas as pd
 
 if __name__ == '__main__':
-    print(len(pos.short_nouns+pos.long_nouns))
+    print(pos.nouns)

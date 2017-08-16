@@ -140,18 +140,24 @@ class PretestInstructionsWindow(ttk.Frame):
             
         pretest_instructions.insert(tk.END, data)
         pretest_instructions.grid()
-        play_audio("instructions_audio_files/directions_pretest.wav")
-
         self.continue_button = ttk.Button(self, text = "Continue",
-                command = self.continue_command)
-        replay_button = ttk.Button(self, text = "Replay test words",
+                command = self.continue_command, state = 'disabled')
+        self.replay_button = ttk.Button(self, text = "Replay test words",
             command = lambda: play_audio("instructions_audio_files/",
-                                         "directions_pretest.wav"))
-        self.controller.bind('<Return>',self.continue_command)
+                                         "directions_pretest.wav"),
+            state = 'disabled')
         self.continue_button.grid()
+        self.replay_button.grid()
+        self.controller.after(500, self.play_pretest_instructions)
 
-        # Arrange elements
-        replay_button.grid()
+    def play_pretest_instructions(self, *args):
+        play_audio("instructions_audio_files/directions_pretest.wav", wait = True)
+        self.controller.after(3000, self.enable_continue_button)
+
+    def enable_continue_button(self, *args):
+        self.continue_button.config(state='normal')
+        self.replay_button.config(state='normal')
+        self.controller.bind('<Return>',self.continue_command)
 
     def continue_command(self, *args):
         self.controller.show_any_questions_window()
@@ -221,7 +227,7 @@ class PretestView(ttk.Frame):
         self.controller = controller
         self.EnterButton = ttk.Button(self, text = 'Enter')
         self.EnterButton.grid(row=2, column=1)
-        self.SpellingEntry = ttk.Entry(self, width=8)
+        self.SpellingEntry = ttk.Entry(self, width=8, font = "Helvetica 20")
         self.SpellingEntry.grid(row=1, column=1)
 
     def set_image(self, noun):
@@ -327,10 +333,21 @@ class TrainingInstructionsWindow(ttk.Frame):
                 font = "Helvetica", width=40, wrap = tk.WORD)
         training_instructions.insert(tk.END, data)
         training_instructions.grid()
-        ttk.Button(self, text = 'Ready', 
-                command = self.controller.start_training).grid()
-        play_audio(normpath("instructions_audio_files/directions_training.wav"))
+        replay_button = ttk.Button(self, text = "Replay instructions",
+            command = lambda: play_audio("instructions_audio_files/",
+                                         "directions_training.wav"))
+        self.ready_button = ttk.Button(self, text = 'Ready', 
+                command = self.controller.start_training, state='disabled')
+        self.ready_button.grid()
+        self.controller.after(500, self.play_training_instructions)
 
+    def play_training_instructions(self, *args):
+        play_audio("instructions_audio_files/directions_training.wav", wait = True)
+        self.controller.after(3000, self.enable_ready_button)
+
+    def enable_ready_button(self, *args):
+        self.ready_button['state'] = 'normal'
+        
     def proceed_to_training(self, *args): 
         self.controller.start_training()
 
@@ -459,7 +476,7 @@ class PostTestProductionView(ttk.Frame):
         super().__init__(parent)
         self.parent, self.controller = parent, controller
 
-        self.SpellingEntry = ttk.Entry(self, width=8)
+        self.SpellingEntry = ttk.Entry(self, width=8, font = "Helvetica 20")
         self.SpellingEntry.grid(row=1, column=1)
         self.SpellingEntry.focus()
         self.EnterButton = ttk.Button(self, text = 'Enter')
