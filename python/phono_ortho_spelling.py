@@ -256,7 +256,7 @@ class PretestController:
         if len(spelling) > 0 and spelling.isalpha():
             self.view.SpellingEntry.delete(0, 'end')
             self.model.NextNoun(spelling)
-            if self.model.n_wrong < 5:
+            if self.model.n_wrong < 12:
                 self.play_noun_audio()
             print(self.model.noun.name)
             self.view.set_image(self.model.noun)
@@ -411,7 +411,7 @@ class TrainingController:
         self.view = TrainingView(root.container, self)
         self.mylist = list(self.model.myGenerator())
         random.shuffle(self.mylist)
-        self.iterator = iter(self.mylist[0:2])
+        self.iterator = iter(self.mylist)
         self.set_image()
 
     def set_image(self):
