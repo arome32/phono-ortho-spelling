@@ -202,7 +202,7 @@ class PretestModel:
                 mydict['T/F'] = 0
                 self.dicts.append(mydict)
                 self.n_wrong += 1
-                if self.n_wrong > 4:
+                if self.n_wrong == 12:
                     print('condition met!')
                     self.controller.do_post_processing()
                     return
@@ -273,7 +273,7 @@ class PretestController:
         self.root.writer = pd.ExcelWriter(self.root.filename+'.xlsx')
         self.model.results.to_excel(self.root.writer, 'Pretest')
 
-        if self.model.n_wrong < 4: 
+        if self.model.n_wrong < 12: 
             self.root.show_thankyou_screen(False)
             self.root.writer.save()
             os.rename(self.root.filename+'.xlsx',self.root.filename+'_CNM.xlsx')
