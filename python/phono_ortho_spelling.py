@@ -44,6 +44,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
 import pandas as pd
+import time
 
 #==============================================================================
 # Some helper functions
@@ -72,6 +73,7 @@ class Noun(object):
         self.production_spelling_is_correct = None
         self.perception_spelling = None
         self.variability = None
+        self.pretest_correct = None
 
 # List of nouns, divided into short and long nouns
 
@@ -79,11 +81,24 @@ nouns = {}
 
 df = pd.read_csv('word_list.csv', encoding = 'utf-8')
 
-nouns['short'] = df[df['phonemes'] >= 9]['Word'].tolist()
-nouns['long'] = df[df['phonemes'] <= 8]['Word'].tolist()
+nouns['long'] = df[df['phonemes'] >= 9]['Word'].tolist()
+nouns['short'] = df[df['phonemes'] <= 8]['Word'].tolist()
 
 short_nouns = [Noun(name.capitalize(),'short') for name in nouns['short']]
 long_nouns = [Noun(name.capitalize(),'long') for name in nouns['long']]
+
+'''
+for words in short_nouns:
+   print(words.name)
+
+print()
+
+for words in long_nouns:
+   print(words.name)
+
+
+print()
+'''
 
 class LoginWindow(ttk.Frame):
     """ This class implements a Login window for the user, where they
@@ -179,6 +194,7 @@ class AnyQuestionsWindow(ttk.Frame):
 
 class PretestModel:
     def __init__(self, controller):
+        self.count = 0
         self.controller = controller
         self.nouns = self.controller.root.assigned_nouns
         random.shuffle(self.nouns)
@@ -193,29 +209,36 @@ class PretestModel:
                     'Participant Answer' : spelling,
                     'Condition' : self.noun.variability,
                  }
+        self.count +=1
         try:
             if spelling.lower() == self.noun.name.lower():
                 mydict['T/F'] = 1
                 self.dicts.append(mydict)
+                self.noun.pretest_correct = True
                 self.noun = next(self.nouns)
             else:
                 mydict['T/F'] = 0
                 self.dicts.append(mydict)
                 self.n_wrong += 1
-                if self.n_wrong == 12:
-                    print('condition met!')
-                    self.controller.do_post_processing()
-                    return
+                self.noun.pretest_correct = False
+                #if self.n_wrong == 12:
+                #    print('condition met!')
+                #    self.controller.do_post_processing()
+                #    return
                 try: 
                     self.noun = next(self.nouns)
                 except StopIteration:
                     try: 
                         self.noun = next(self.nouns)
                     except StopIteration:
+                        print(self.count)
                         print('done with iteration!')
+                        print(self.dicts)
                         self.controller.do_post_processing()
                         return
         except StopIteration:
+            print(self.count)
+            print(self.dicts)
             print('done with iteration!')
             self.controller.do_post_processing()
             return
@@ -256,8 +279,9 @@ class PretestController:
         if len(spelling) > 0 and spelling.isalpha():
             self.view.SpellingEntry.delete(0, 'end')
             self.model.NextNoun(spelling)
-            if self.model.n_wrong < 12:
-                self.play_noun_audio()
+            if self.model.n_wrong <= 30 and self.model.count !=  30:# or self.model.count <30:
+               #self.count +=1
+               self.play_noun_audio()
             print(self.model.noun.name)
             self.view.set_image(self.model.noun)
             self.view.ImageBox.grid(row=0, columnspan=2, padx=10,
@@ -313,10 +337,12 @@ class ThankYouScreen(ttk.Frame):
         self.grid(column = 0, row = 0)
         # Define the elements
         if condition_met:
+            controller.title('Training will begin')
             ttk.Label(self, 
                 text = "Thank you. Please get ready for the training").grid()
             ttk.Button(self, text = "Proceed to Training").grid()
         else:
+            controller.title('Thank you')
             ttk.Label(self, text = "Thank you for your help.").grid()
             ttk.Button(self, text = "Exit program", 
                     command = self.controller.quit).grid()
@@ -355,7 +381,7 @@ def splitList(xs: List) -> Tuple[List,List]:
     """ Randomly shuffle elements of list into two sublists."""
     random.shuffle(xs)
     length = len(xs)//2
-    return xs[:length], xs[length:2*length]
+    return xs[:length], xs[length:2*length+1]
 
 def assign_nouns(short_nouns, long_nouns):
     random.shuffle(short_nouns)
@@ -387,13 +413,14 @@ class TrainingModel:
 
     def myGenerator(self):
         for noun in self.nouns:
-            photo = PIL.ImageTk.PhotoImage(PIL.Image.open(noun.img))
-            if noun.variability == "high":
-                for audio in noun.audios:
+           if noun.pretest_correct == False:
+              photo = PIL.ImageTk.PhotoImage(PIL.Image.open(noun.img))
+              if noun.variability == "high":
+                 for audio in noun.audios:
                     yield noun, photo, audio 
-            elif noun.variability == "low":
-                audio = random.choice(noun.audios)
-                for i in range(10):
+              elif noun.variability == "low":
+                 audio = random.choice(noun.audios)
+                 for i in range(10):
                     yield noun, photo, audio 
 
 class TrainingView(ttk.Frame):
@@ -410,6 +437,15 @@ class TrainingController:
         self.model = TrainingModel(self)
         self.view = TrainingView(root.container, self)
         self.mylist = list(self.model.myGenerator())
+        print()
+        print()
+        print()
+        print()
+        for word in self.mylist:
+           print(word[0].name)
+        print()
+        print()
+        print()
         random.shuffle(self.mylist)
         self.iterator = iter(self.mylist)
         self.set_image()
@@ -714,20 +750,24 @@ class MainApplication(tk.Tk):
         self.writer = None
     def show_login_window(self):
         self.LoginWindow = LoginWindow(self.container, self)
+        self.title('Login')
         self.LoginWindow.grid(row = 0, column = 0, sticky = "nsew")
     def show_thankyou_screen(self, condition_met):
         self.ThankYouScreen = ThankYouScreen(self.container, self, condition_met)
         self.ThankYouScreen.grid(row = 0, column = 0, sticky = "nsew")
     def show_pretest_instructions(self):
         self.PretestInstructionsWindow=PretestInstructionsWindow(self.container,self)
+        self.title('Pretest Instructions')
         self.PretestInstructionsWindow.grid(row = 0, column = 0, sticky = "nsew")
         self.PretestInstructionsWindow.tkraise()
     def show_any_questions_window(self):
         self.AnyQuestionsWindow = AnyQuestionsWindow(self.container, self)
+        self.title('Any Questions')
         self.AnyQuestionsWindow.grid(row = 0, column = 0, sticky = "nsew")
         self.AnyQuestionsWindow.tkraise()
     def start_pretest(self):
         self.PretestController = PretestController(self)
+        self.title('Pretest')
         self.PretestController.view.grid(row = 0, column = 0, sticky = "nsew")
         self.PretestController.view.tkraise()
     def end_pretest(self):
@@ -736,34 +776,43 @@ class MainApplication(tk.Tk):
     def show_training_instructions(self):
         self.TrainingInstructionsWindow = TrainingInstructionsWindow(
                 self.container, self)
+        self.title("Training instructions")
         self.TrainingInstructionsWindow.grid(row = 0, column = 0, sticky = "nsew")
         self.TrainingInstructionsWindow.tkraise()
     def start_training(self):
         self.TrainingController = TrainingController(self)
+        self.title("Training")
         self.TrainingController.view.grid(row=0,column=0,sticky="nsew")
         self.TrainingController.view.tkraise()
     def show_post_test_production_instructions(self):
         self.PostTestProductionInstructions= PostTestProductionInstructions(
                 self.container, self)
+        self.title("Post Test Production Instructions")
         self.PostTestProductionInstructions.grid(row = 0, column = 0, sticky = "nsew")
         self.PostTestProductionInstructions.tkraise()
     def start_post_test_production(self):
         self.PostTestProductionController = PostTestProductionController(self)
+        self.title("Post Test Production")
         self.PostTestProductionController.view.grid(row=0,column=0,sticky="nsew")
         self.PostTestProductionController.view.tkraise()
     def show_post_test_perception_instructions(self):
         self.PostTestPerceptionInstructions= PostTestPerceptionInstructions(
                 self.container, self)
+        self.title("Post Test Perception Instructions")
         self.PostTestPerceptionInstructions.grid(row = 0, column = 0, sticky = "nsew")
         self.PostTestPerceptionInstructions.tkraise()
     def start_post_test_perception(self):
         self.PostTestPerceptionController = PostTestPerceptionController(self)
+        self.title("Post Test Perception")
         self.PostTestPerceptionController.view.grid(row=0,column=0,sticky="nsew")
         self.PostTestPerceptionController.view.tkraise()
     def show_final_screen(self):
         self.FinalScreen = FinalScreen(self.container, self)
+        self.title("Final Screen")
         self.FinalScreen.grid(row = 0, column = 0, sticky = "nsew")
         self.writer.save()
+        time.sleep(5)
+        exit()
 
 if __name__=="__main__":
     app = MainApplication()
