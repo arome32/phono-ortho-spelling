@@ -249,9 +249,9 @@ class PretestView(ttk.Frame):
         self.parent = parent
         self.controller = controller
         self.EnterButton = ttk.Button(self, text = 'Enter')
-        self.EnterButton.grid(row=2, column=1)
-        self.SpellingEntry = ttk.Entry(self, width=8, font = "Helvetica 20")
-        self.SpellingEntry.grid(row=1, column=1)
+        self.EnterButton.grid(row=1, column=1)
+        self.SpellingEntry = ttk.Entry(self, width=15, font = "Helvetica 25")
+        self.SpellingEntry.grid(row=1, column=0)
 
     def set_image(self, noun):
         self.noun = noun
@@ -275,8 +275,9 @@ class PretestController:
     def NextImage(self, *args):
         spelling = self.view.SpellingEntry.get()
         self.view.SpellingEntry.delete(0, 'end')
+        print(type(spelling))
 
-        if len(spelling) > 0 and spelling.isalpha():
+        if len(spelling) > 0 and (spelling.isalpha() or " " in spelling):
             self.view.SpellingEntry.delete(0, 'end')
             self.model.NextNoun(spelling)
             if self.model.n_wrong <= 30 and self.model.count !=  30:# or self.model.count <30:
@@ -437,19 +438,34 @@ class TrainingController:
         self.model = TrainingModel(self)
         self.view = TrainingView(root.container, self)
         self.mylist = list(self.model.myGenerator())
+        random.shuffle(self.mylist)
         print()
         print()
         print()
-        print()
+        self.no_reps(self.mylist)
+        i = 0
         for word in self.mylist:
            print(word[0].name)
+           i += 1
+        
+        print(i)
         print()
         print()
-        print()
-        random.shuffle(self.mylist)
+
         self.iterator = iter(self.mylist)
         self.set_image()
+    
+    def no_reps(self, in_list):
+        i = 0
+        while i < len(in_list)-1:
+           if i != len(in_list):
+              if(in_list[i][0].name == in_list[i+1][0].name):
+                 temp = in_list.pop(i+1)
+                 in_list.append(temp)
+           i += 1
 
+ 
+    
     def set_image(self):
         try:
             noun, photo, audio = next(self.iterator) 
@@ -512,11 +528,15 @@ class PostTestProductionView(ttk.Frame):
         super().__init__(parent)
         self.parent, self.controller = parent, controller
 
-        self.SpellingEntry = ttk.Entry(self, width=8, font = "Helvetica 20")
-        self.SpellingEntry.grid(row=1, column=1)
+        self.SpellingEntry = ttk.Entry(self, width=15, font = "Helvetica 25")
+        self.SpellingEntry.grid(row=1, column=0)
         self.SpellingEntry.focus()
         self.EnterButton = ttk.Button(self, text = 'Enter')
-        self.EnterButton.grid(row=2, column=1)
+        self.EnterButton.grid(row=1, column=1)
+
+
+        
+
 
     def set_image(self,noun):
         self.noun = noun
@@ -546,7 +566,7 @@ class PostTestProductionController:
     def test_spelling(self, *args):
         spelling = self.view.SpellingEntry.get()
         self.view.SpellingEntry.delete(0, 'end')
-        if len(spelling) > 0 and spelling.isalpha():
+        if len(spelling) > 0 and (spelling.isalpha() or " " in spelling):
             mydict = {
                         'Word' : self.noun.name,
                         'Length' : self.noun.length,
@@ -735,7 +755,7 @@ class FinalScreen(ttk.Frame):
         self.controller = controller
         self.grid(column = 0, row = 0)
         # Define the elements
-        tk.Label(self, text = "Thank you", height = 10, width = 20, 
+        tk.Label(self, text = "Thank you for your time", height = 10, width = 20, 
                 font = ("Helvetica", "20")).grid()
 
 class MainApplication(tk.Tk):
@@ -811,8 +831,9 @@ class MainApplication(tk.Tk):
         self.title("Final Screen")
         self.FinalScreen.grid(row = 0, column = 0, sticky = "nsew")
         self.writer.save()
-        time.sleep(5)
-        exit()
+        #time.sleep(5)
+        print("done")
+        #exit()
 
 if __name__=="__main__":
     app = MainApplication()
