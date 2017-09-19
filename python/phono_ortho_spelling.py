@@ -38,6 +38,7 @@ import simpleaudio as sa
 from glob import glob
 from PIL import Image, ImageTk
 import itertools
+from tkinter import filedialog
 import typing
 from typing import List, Tuple
 import tkinter as tk
@@ -75,6 +76,7 @@ class Noun(object):
         self.variability = None
         self.pretest_correct = None
 
+
 # List of nouns, divided into short and long nouns
 
 nouns = {}
@@ -86,6 +88,22 @@ nouns['short'] = df[df['phonemes'] <= 8]['Word'].tolist()
 
 short_nouns = [Noun(name.capitalize(),'short') for name in nouns['short']]
 long_nouns = [Noun(name.capitalize(),'long') for name in nouns['long']]
+
+
+def open_file():
+   root = tk.Tk()
+   root.withdraw()
+
+   file_path = filedialog.askopenfilename()
+   return file_path
+
+
+
+testing_file = open(open_file())
+for line in testing_file:
+   print(line)
+
+
 
 '''
 for words in short_nouns:
@@ -268,13 +286,17 @@ class PretestController:
         self.view = PretestView(root.container, self)
         self.view.set_image(self.model.noun)
         self.view.EnterButton.config(command=self.NextImage)
+        self.view.after(3000,self.enable_stuff)
         root.bind('<Return>', self.NextImage)
         self.view.SpellingEntry.focus()
+        self.disable_stuff()
         self.play_noun_audio()
 
     def NextImage(self, *args):
+        self.view.after(3000,self.enable_stuff)
         spelling = self.view.SpellingEntry.get()
         self.view.SpellingEntry.delete(0, 'end')
+        self.disable_stuff()
         print(type(spelling))
 
         if len(spelling) > 0 and (spelling.isalpha() or " " in spelling):
@@ -289,6 +311,15 @@ class PretestController:
                                     pady=10, sticky="nsew")
 
 
+    def disable_stuff(self):
+        self.view.EnterButton.state(["disabled"]) 
+        self.view.SpellingEntry.state(["disabled"]) 
+        
+
+    def enable_stuff(self):
+        self.view.EnterButton.state(["!disabled"]) 
+        self.view.SpellingEntry.state(["!disabled"]) 
+        
     def do_post_processing(self):
         """ Do post-processing. Does the participant meet the criteria for 
             the study? """
@@ -602,6 +633,16 @@ class PostTestProductionController:
                     f.write(str(word)+'\n')
             self.root.show_post_test_perception_instructions()
             pass
+    
+    def disable_stuff(self):
+        self.view.EnterButton.state(["disabled"]) 
+        self.view.SpellingEntry.state(["disabled"]) 
+        
+
+    def enable_stuff(self):
+        self.view.EnterButton.state(["!disabled"]) 
+        self.view.SpellingEntry.state(["!disabled"]) 
+     
 
 class PostTestPerceptionInstructions(ttk.Frame):
     def __init__(self, parent, controller):
