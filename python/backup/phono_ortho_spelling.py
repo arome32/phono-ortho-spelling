@@ -31,13 +31,9 @@ data attributes can be of different types - 'name' is a string,
 
 """
 
-import xlrd
-import csv
 import os, PIL, random
 from os.path import normpath
 import pandas as pd
-from pandas import ExcelWriter
-from pandas import ExcelFile
 import simpleaudio as sa
 from glob import glob
 from PIL import Image, ImageTk
@@ -51,18 +47,10 @@ from tkinter.scrolledtext import ScrolledText
 import pandas as pd
 import time
 
-
-
-input_file = None
-incorrect_words = []
-dicts = {}
-
-
-
-
 #==============================================================================
 # Some helper functions
 #==============================================================================
+
 def play_audio(filepath, wait = False):
     wave_obj = sa.WaveObject.from_wave_file(filepath)
     play_obj = wave_obj.play()
@@ -71,29 +59,13 @@ def play_audio(filepath, wait = False):
 
 
 def open_file():
-   global input_file
    root = tk.Tk()
    root.withdraw()
 
    file_path = filedialog.askopenfilename()
    return file_path
 
-def csv_from_excel():
-    wb = xlrd.open_workbook(open_file())
-    sh = wb.sheet_by_name('Pretest')
-    your_csv_file = open('pretest.csv', 'w')
-    wr = csv.writer(your_csv_file, quoting=csv.QUOTE_ALL)
 
-    for rownum in range(sh.nrows):
-        wr.writerow(sh.row_values(rownum))
-
-    your_csv_file.close()
-
-
-def load_everything_in():
-    for line in input_file:
-       line = line.split(",")
-       incorrect_words.append(line[1])
 #==============================================================================
 # Noun helper class and noun lists
 #==============================================================================
@@ -126,11 +98,30 @@ short_nouns = [Noun(name.capitalize(),'short') for name in nouns['short']]
 long_nouns = [Noun(name.capitalize(),'long') for name in nouns['long']]
 
 
+
+#testing_file = open(open_file())
+#for line in testing_file:
+#   print(line)
+
+
+
+'''
+for words in short_nouns:
+   print(words.name)
+
+print()
+
+for words in long_nouns:
+   print(words.name)
+
+
+print()
+'''
+
 class LoginWindow(ttk.Frame):
     """ This class implements a Login window for the user, where they
     can type in the participant code and the examiner number """
     def __init__(self, parent, controller):
-        global input_file
         super().__init__(parent)
         self.controller = controller
         # self.grid(column = 0, row = 0)
@@ -152,7 +143,6 @@ class LoginWindow(ttk.Frame):
                 textvariable = self.examiner)
         self.examiner_label = ttk.Label(self, text="Examiner:", padding = 10)
         self.login_button = ttk.Button(self, text="Login", command=self.login)
-        self.load_button = ttk.Button(self, text="Load Pretest Data", command=self.load)
 
         # Arrange the elements
         title.grid(row = 0, columnspan = 3, pady = 5)
@@ -161,19 +151,233 @@ class LoginWindow(ttk.Frame):
         self.examiner_label.grid(row = 2, column = 1,sticky = tk.E, padx = 1)
         self.examiner_entry.grid(row = 2, column = 2, padx = 1)
         self.login_button.grid(row = 3, column = 2, pady = 10)
-        self.load_button.grid(row = 3, column = 1, pady = 10)
         self.controller.bind('<Return>', self.login)
         self.participant_code_entry.focus()
 
     def login(self, *args):
-        self.controller.show_training_instructions()
+        self.controller.show_pretest_instructions()
         self.controller.participant_code = self.participant_code_entry.get()
         self.controller.examiner = self.examiner_entry.get()
-    
-    def load(self, *args):
-        global input_file
-        csv_from_excel()
-        input_file = open("pretest.csv")
+
+class PretestInstructionsWindow(ttk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+        self.parent, self.controller = parent, controller
+
+        # Define elements
+        with open('pretest_instructions.txt', 'r') as f:
+            data = f.read()
+
+        pretest_instructions = ScrolledText(self, borderwidth=10, 
+                font = "Helvetica", width=40, wrap = tk.WORD)
+            
+        pretest_instructions.insert(tk.END, data)
+        pretest_instructions.grid()
+        self.continue_button = ttk.Button(self, text = "Continue",
+                command = self.continue_command, state = 'disabled')
+        self.replay_button = ttk.Button(self, text = "Replay test words",
+            command = lambda: play_audio("instructions_audio_files/",
+                                         "directions_pretest.wav"),
+            state = 'disabled')
+        self.continue_button.grid()
+        self.replay_button.grid()
+        self.controller.after(500, self.play_pretest_instructions)
+
+    def play_pretest_instructions(self, *args):
+        play_audio("instructions_audio_files/directions_pretest.wav", wait = True)
+        self.controller.after(3000, self.enable_continue_button)
+
+    def enable_continue_button(self, *args):
+        self.continue_button.config(state='normal')
+        self.replay_button.config(state='normal')
+        self.controller.bind('<Return>',self.continue_command)
+
+    def continue_command(self, *args):
+        self.controller.show_any_questions_window()
+
+class AnyQuestionsWindow(ttk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+        self.parent, self.controller = parent, controller
+        play_audio("instructions_audio_files/directions_anyquestions.wav")
+        title = ttk.Label(self, text = "Any questions?")
+        title.grid(row = 0, columnspan = 3, pady = 5)
+        self.continue_button = ttk.Button(self, text = "Continue",
+                command = self.continue_command)
+        self.controller.bind('<Return>',self.continue_command)
+        self.continue_button.grid()
+
+    def continue_command(self, *args):
+        self.controller.start_pretest()
+
+class PretestModel:
+    def __init__(self, controller):
+        self.count = 0
+        self.controller = controller
+        self.nouns = self.controller.root.assigned_nouns
+        random.shuffle(self.nouns)
+        self.nouns = iter(self.nouns) ; self.noun = next(self.nouns)
+        self.records, self.n_wrong = {}, 0
+        self.dicts = []
+
+    def NextNoun(self, spelling):
+        mydict = {  
+                    'Word' : self.noun.name,
+                    'Length' : self.noun.length,
+                    'Participant Answer' : spelling,
+                    'Condition' : self.noun.variability,
+                 }
+        self.count +=1
+        try:
+            if spelling.lower() == self.noun.name.lower():
+                mydict['T/F'] = 1
+                self.dicts.append(mydict)
+                self.noun.pretest_correct = True
+                self.noun = next(self.nouns)
+            else:
+                mydict['T/F'] = 0
+                self.dicts.append(mydict)
+                self.n_wrong += 1
+                self.noun.pretest_correct = False
+                #if self.n_wrong == 12:
+                #    print('condition met!')
+                #    self.controller.do_post_processing()
+                #    return
+                try: 
+                    self.noun = next(self.nouns)
+                except StopIteration:
+                    try: 
+                        self.noun = next(self.nouns)
+                    except StopIteration:
+                        print(self.count)
+                        print('done with iteration!')
+                        print(self.dicts)
+                        self.controller.do_post_processing()
+                        return
+        except StopIteration:
+            print(self.count)
+            print(self.dicts)
+            print('done with iteration!')
+            self.controller.do_post_processing()
+            return
+
+class PretestView(ttk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+        self.parent = parent
+        self.controller = controller
+        self.EnterButton = ttk.Button(self, text = 'Enter')
+        self.EnterButton.grid(row=1, column=1)
+        self.SpellingEntry = ttk.Entry(self, width=15, font = "Helvetica 25")
+        self.SpellingEntry.grid(row=1, column=0)
+
+    def set_image(self, noun):
+        self.noun = noun
+        photo = PIL.ImageTk.PhotoImage(PIL.Image.open(self.noun.img))
+        self.ImageBox = ttk.Label(self, image = photo)
+        self.ImageBox.image=photo
+        self.ImageBox.grid(row=0,columnspan=2,
+                           padx=10,pady=10,sticky="nsew")
+
+class PretestController:
+    def __init__(self, root):
+        self.root = root
+        self.model = PretestModel(self)
+        self.view = PretestView(root.container, self)
+        self.view.set_image(self.model.noun)
+        self.view.EnterButton.config(command=self.NextImage)
+        self.view.after(3000,self.enable_stuff)
+        root.bind('<Return>', self.NextImage)
+        self.view.SpellingEntry.focus()
+        self.disable_stuff()
+        self.play_noun_audio()
+
+    def NextImage(self, *args):
+        self.view.after(3000,self.enable_stuff)
+        spelling = self.view.SpellingEntry.get()
+        self.view.SpellingEntry.delete(0, 'end')
+        self.disable_stuff()
+        print(type(spelling))
+
+        if len(spelling) > 0 and (spelling.isalpha() or " " in spelling):
+            self.view.SpellingEntry.delete(0, 'end')
+            self.model.NextNoun(spelling)
+            if self.model.n_wrong <= 30 and self.model.count !=  30:# or self.model.count <30:
+               #self.count +=1
+               self.play_noun_audio()
+            print(self.model.noun.name)
+            self.view.set_image(self.model.noun)
+            self.view.ImageBox.grid(row=0, columnspan=2, padx=10,
+                                    pady=10, sticky="nsew")
+
+
+    def disable_stuff(self):
+        self.view.EnterButton.state(["disabled"]) 
+        self.view.SpellingEntry.state(["disabled"]) 
+        
+
+    def enable_stuff(self):
+        self.view.EnterButton.state(["!disabled"]) 
+        self.view.SpellingEntry.state(["!disabled"]) 
+        
+    def do_post_processing(self):
+        """ Do post-processing. Does the participant meet the criteria for 
+            the study? """
+        self.model.results = pd.DataFrame(self.model.dicts,
+                columns = ['Word', 'T/F', 'Participant Answer', 'Condition'])
+        self.root.filename = self.root.participant_code+'_'+self.root.examiner
+        self.root.writer = pd.ExcelWriter(self.root.filename+'.xlsx')
+        self.model.results.to_excel(self.root.writer, 'Pretest')
+
+        if self.model.n_wrong < 12: 
+            self.root.show_thankyou_screen(False)
+            self.root.writer.save()
+            os.rename(self.root.filename+'.xlsx',self.root.filename+'_CNM.xlsx')
+        else:
+            print('else')
+            self.root.show_thankyou_screen(True)
+            self.root.end_pretest()
+
+    def play_noun_audio(self):
+        try:
+            audiofile = self.model.noun.novel_talker
+            play_audio(audiofile)
+        except: 
+            pass
+
+class EndPretestWindow(ttk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+        self.parent = parent
+        self.controller = controller
+
+        self.label = ttk.Label(self, text = "Pretest done")
+        self.label.grid()
+        self.training_button = ttk.Button(self,
+                text = 'Proceed to Training Instructions',
+                command=self.proceed_to_training_instructions)
+        self.training_button.grid()
+        self.controller.bind('<Return>',self.proceed_to_training_instructions)
+
+    def proceed_to_training_instructions(self, *args):
+        self.controller.show_training_instructions()
+
+class ThankYouScreen(ttk.Frame):
+    def __init__(self, parent, controller, condition_met):
+        super().__init__(parent)
+        self.controller = controller
+        self.grid(column = 0, row = 0)
+        # Define the elements
+        if condition_met:
+            controller.title('Training will begin')
+            ttk.Label(self, 
+                text = "Thank you. Please get ready for the training").grid()
+            ttk.Button(self, text = "Proceed to Training").grid()
+        else:
+            controller.title('Thank you')
+            ttk.Label(self, text = "Thank you for your help.").grid()
+            ttk.Button(self, text = "Exit program", 
+                    command = self.controller.quit).grid()
 
 class TrainingInstructionsWindow(ttk.Frame):
     def __init__(self, parent, controller):
@@ -233,10 +437,8 @@ def assign_nouns(short_nouns, long_nouns):
     random.shuffle(assigned_nouns)
     return assigned_nouns 
 
-
 class TrainingModel:
     def __init__(self, controller):
-        create_dicts()
         self.controller = controller
         self.nouns = self.controller.root.assigned_nouns
         self.results = []
@@ -607,51 +809,64 @@ class MainApplication(tk.Tk):
         self.participant_code = 'default_participant_code'
         self.assigned_nouns = assign_nouns(short_nouns, long_nouns)
         self.writer = None
-
     def show_login_window(self):
         self.LoginWindow = LoginWindow(self.container, self)
         self.title('Login')
         self.LoginWindow.grid(row = 0, column = 0, sticky = "nsew")
-    
+    def show_thankyou_screen(self, condition_met):
+        self.ThankYouScreen = ThankYouScreen(self.container, self, condition_met)
+        self.ThankYouScreen.grid(row = 0, column = 0, sticky = "nsew")
+    def show_pretest_instructions(self):
+        self.PretestInstructionsWindow=PretestInstructionsWindow(self.container,self)
+        self.title('Pretest Instructions')
+        self.PretestInstructionsWindow.grid(row = 0, column = 0, sticky = "nsew")
+        self.PretestInstructionsWindow.tkraise()
+    def show_any_questions_window(self):
+        self.AnyQuestionsWindow = AnyQuestionsWindow(self.container, self)
+        self.title('Any Questions')
+        self.AnyQuestionsWindow.grid(row = 0, column = 0, sticky = "nsew")
+        self.AnyQuestionsWindow.tkraise()
+    def start_pretest(self):
+        self.PretestController = PretestController(self)
+        self.title('Pretest')
+        self.PretestController.view.grid(row = 0, column = 0, sticky = "nsew")
+        self.PretestController.view.tkraise()
+    def end_pretest(self):
+        self.EndPretestWindow = EndPretestWindow(self.container, self)
+        self.EndPretestWindow.grid(row=0,column=0,sticky="nsew")
     def show_training_instructions(self):
         self.TrainingInstructionsWindow = TrainingInstructionsWindow(
                 self.container, self)
         self.title("Training instructions")
         self.TrainingInstructionsWindow.grid(row = 0, column = 0, sticky = "nsew")
         self.TrainingInstructionsWindow.tkraise()
-    
     def start_training(self):
         self.TrainingController = TrainingController(self)
         self.title("Training")
         self.TrainingController.view.grid(row=0,column=0,sticky="nsew")
         self.TrainingController.view.tkraise()
-
     def show_post_test_production_instructions(self):
         self.PostTestProductionInstructions= PostTestProductionInstructions(
                 self.container, self)
         self.title("Post Test Production Instructions")
         self.PostTestProductionInstructions.grid(row = 0, column = 0, sticky = "nsew")
         self.PostTestProductionInstructions.tkraise()
-
     def start_post_test_production(self):
         self.PostTestProductionController = PostTestProductionController(self)
         self.title("Post Test Production")
         self.PostTestProductionController.view.grid(row=0,column=0,sticky="nsew")
         self.PostTestProductionController.view.tkraise()
-
     def show_post_test_perception_instructions(self):
         self.PostTestPerceptionInstructions= PostTestPerceptionInstructions(
                 self.container, self)
         self.title("Post Test Perception Instructions")
         self.PostTestPerceptionInstructions.grid(row = 0, column = 0, sticky = "nsew")
         self.PostTestPerceptionInstructions.tkraise()
-
     def start_post_test_perception(self):
         self.PostTestPerceptionController = PostTestPerceptionController(self)
         self.title("Post Test Perception")
         self.PostTestPerceptionController.view.grid(row=0,column=0,sticky="nsew")
         self.PostTestPerceptionController.view.tkraise()
-
     def show_final_screen(self):
         self.FinalScreen = FinalScreen(self.container, self)
         self.title("Final Screen")

@@ -32,8 +32,8 @@ data attributes can be of different types - 'name' is a string,
 """
 
 
-from flask import Flask
-app = Flask(__name__)
+#from flask import Flask
+#app = Flask(__name__)
 
 import os, PIL, random
 from os.path import normpath
@@ -302,7 +302,7 @@ class PretestController:
             the study? """
         self.model.results = pd.DataFrame(self.model.dicts,
                 columns = ['ORTHO TARGET', 'PRODUCTION','T/F', 'Condition'])
-        self.root.filename = 'pretest_'+self.root.participant_code
+        self.root.filename = 'pretest_'+ self.root.participant_code.replace(" ","_")
         self.root.writer = pd.ExcelWriter(self.root.filename+'.xlsx')
         self.model.results.to_excel(self.root.writer, 'Pretest')
 
@@ -388,7 +388,8 @@ class MainApplication(tk.Tk):
         self.EndPretestWindow.grid(row=0,column=0,sticky="nsew")
 
 
-@app.route("/")
+#@app.route("/")
 def main():
     app = MainApplication()
     app.mainloop()
+main()
