@@ -34,6 +34,7 @@ data attributes can be of different types - 'name' is a string,
 import xlrd
 import csv
 import os, PIL, random
+from random import randint
 from os.path import normpath
 import pandas as pd
 from pandas import ExcelWriter
@@ -54,8 +55,8 @@ import time
 
 
 input_file = None
-incorrect_words = []
-dicts = {}
+dicts = []
+
 
 
 
@@ -91,9 +92,51 @@ def csv_from_excel():
 
 
 def load_everything_in():
-    for line in input_file:
-       line = line.split(",")
-       incorrect_words.append(line[1])
+    for i in range(1, len(input_file)):
+       line = input_file[i]
+       line = line.split(",")[1:]
+       
+       tf = int(line[2].replace('.0','').replace('"',''))
+       
+       toAdd = {
+                  'Word' : line[0].replace('"',""),
+                  'Participant Answer' : line[1].replace('"',""),
+                  'T/F' : tf,
+                  'Condition' : line[3].replace('"',"")
+               }
+       dicts.append(toAdd)
+       #print(toAdd)
+
+
+def pick_12():
+    global dicts
+    to_do = dicts
+    new_dicts = []
+    i = 0
+    while i < 12:
+        num = randint(0,len(dicts)-1)
+        if(dicts[num] in new_dicts):
+           continue
+        else:
+           new_dicts.append(dicts[num]) 
+           i += 1
+    #for word in new_dicts:
+    #    print(word)
+    dicts =  new_dicts
+    
+def use_pretest_nouns(nouns): 
+    new_nouns = []
+    print(len(dicts))
+
+    for word in dicts:
+        print(word)
+        for noun in nouns:
+           if word["Word"] == noun.name:
+               noun.pretest_correct = False
+               noun.production_spelling = word["Participant Answer"]
+               new_nouns.append(noun)
+               break
+    return new_nouns
 #==============================================================================
 # Noun helper class and noun lists
 #==============================================================================
@@ -173,7 +216,9 @@ class LoginWindow(ttk.Frame):
     def load(self, *args):
         global input_file
         csv_from_excel()
-        input_file = open("pretest.csv")
+        input_file = open("pretest.csv").readlines()
+        load_everything_in()
+        pick_12()
 
 class TrainingInstructionsWindow(ttk.Frame):
     def __init__(self, parent, controller):
@@ -236,9 +281,10 @@ def assign_nouns(short_nouns, long_nouns):
 
 class TrainingModel:
     def __init__(self, controller):
-        create_dicts()
         self.controller = controller
+        self.controller.root.assigned_nouns = use_pretest_nouns(self.controller.root.assigned_nouns)
         self.nouns = self.controller.root.assigned_nouns
+        
         self.results = []
 
     def myGenerator(self):
@@ -277,8 +323,7 @@ class TrainingController:
            print(word[0].name)
            i += 1
         
-        print(i)
-        print()
+        print("here",i)
         print()
 
         self.iterator = iter(self.mylist)
@@ -308,9 +353,9 @@ class TrainingController:
             self.view.ImageBox.image=photo
             self.root.after(1000, self.play_image_audio, audio)
         except StopIteration:
-            df = pd.DataFrame(self.model.results, 
-                    columns = ['Word', 'Talker', 'Variability'])
-            df.to_excel(self.root.writer, 'Training')
+            #df = pd.DataFrame(self.model.results, 
+            #        columns = ['Word', 'Talker', 'Variability'])
+            #df.to_excel(self.root.writer, 'Training')
             self.root.show_post_test_production_instructions()
             pass
 
@@ -606,6 +651,8 @@ class MainApplication(tk.Tk):
         self.examiner = 'default_examiner'
         self.participant_code = 'default_participant_code'
         self.assigned_nouns = assign_nouns(short_nouns, long_nouns)
+        #for noun in self.assigned_nouns:
+        #   print(noun)
         self.writer = None
 
     def show_login_window(self):
