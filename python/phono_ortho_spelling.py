@@ -77,10 +77,11 @@ def open_file():
    root.withdraw()
 
    file_path = filedialog.askopenfilename()
+   print(file_path)
    return file_path
 
-def csv_from_excel():
-    wb = xlrd.open_workbook(open_file())
+def csv_from_excel(path):
+    wb = xlrd.open_workbook(path)
     sh = wb.sheet_by_name('Pretest')
     your_csv_file = open('pretest.csv', 'w')
     wr = csv.writer(your_csv_file, quoting=csv.QUOTE_ALL)
@@ -174,6 +175,9 @@ class LoginWindow(ttk.Frame):
     can type in the participant code and the examiner number """
     def __init__(self, parent, controller):
         global input_file
+        
+        self.ready = False
+
         super().__init__(parent)
         self.controller = controller
         # self.grid(column = 0, row = 0)
@@ -194,31 +198,53 @@ class LoginWindow(ttk.Frame):
         self.examiner_entry = ttk.Entry(self, width=20,
                 textvariable = self.examiner)
         self.examiner_label = ttk.Label(self, text="Examiner:", padding = 10)
+        
         self.login_button = ttk.Button(self, text="Login", command=self.login)
+        
         self.load_button = ttk.Button(self, text="Load Pretest Data", command=self.load)
+        self.load_label = ttk.Label(self, text="", padding = 10)
 
         # Arrange the elements
         title.grid(row = 0, columnspan = 3, pady = 5)
+        
         self.participant_code_label.grid(row=1, column=1, sticky=tk.E, padx= 1)
         self.participant_code_entry.grid(row = 1, column = 2, padx = 1)
+
         self.examiner_label.grid(row = 2, column = 1,sticky = tk.E, padx = 1)
         self.examiner_entry.grid(row = 2, column = 2, padx = 1)
+
         self.login_button.grid(row = 3, column = 2, pady = 10)
         self.load_button.grid(row = 3, column = 1, pady = 10)
+        self.load_label.grid(row = 4, column = 1, pady = 10)
+
         self.controller.bind('<Return>', self.login)
         self.participant_code_entry.focus()
 
     def login(self, *args):
-        self.controller.show_training_instructions()
-        self.controller.participant_code = self.participant_code_entry.get()
-        self.controller.examiner = self.examiner_entry.get()
-    
+        if(self.ready):
+            self.controller.show_training_instructions()
+            self.controller.participant_code = self.participant_code_entry.get()
+            self.controller.examiner = self.examiner_entry.get()
+        else:
+            self.load_label['text'] = 'Please select a file'
+            
     def load(self, *args):
         global input_file
-        csv_from_excel()
-        input_file = open("pretest.csv").readlines()
-        load_everything_in()
-        pick_12()
+        to_Open = str(open_file())
+        file_name = to_Open.split("/")[-1]
+        print(str(to_Open).replace("()","HIHI"))
+        if(to_Open == '()' or to_Open == ""):
+            self.load_label['text'] = 'Please select a file'
+        else:
+            if(".xlsx" in to_Open):
+                self.ready = True
+                csv_from_excel(to_Open)
+                self.load_label['text'] = "Selected File: "+ file_name
+                input_file = open("pretest.csv").readlines()
+                load_everything_in()
+                pick_12()
+            else:
+                self.load_label['text'] = 'Current file: ' + file_name + '\nPlease select an Excel file (.xlsx)'
 
 class TrainingInstructionsWindow(ttk.Frame):
     def __init__(self, parent, controller):
@@ -312,6 +338,7 @@ class TrainingController:
         self.root = root
         self.model = TrainingModel(self)
         self.view = TrainingView(root.container, self)
+        exit()
         self.mylist = list(self.model.myGenerator())
         random.shuffle(self.mylist)
         print()
