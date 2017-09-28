@@ -77,7 +77,6 @@ def open_file():
    root.withdraw()
 
    file_path = filedialog.askopenfilename()
-   print(file_path)
    return file_path
 
 def csv_from_excel(path):
@@ -177,6 +176,7 @@ class LoginWindow(ttk.Frame):
         global input_file
         
         self.ready = False
+        self.incorrect_file = False
 
         super().__init__(parent)
         self.controller = controller
@@ -226,24 +226,26 @@ class LoginWindow(ttk.Frame):
             self.controller.participant_code = self.participant_code_entry.get()
             self.controller.examiner = self.examiner_entry.get()
         else:
-            self.load_label['text'] = 'Please select a file'
+            if(not self.incorrect_file):
+                self.load_label['text'] = 'Please select a file'
             
     def load(self, *args):
         global input_file
         to_Open = str(open_file())
         file_name = to_Open.split("/")[-1]
-        print(str(to_Open).replace("()","HIHI"))
         if(to_Open == '()' or to_Open == ""):
             self.load_label['text'] = 'Please select a file'
         else:
             if(".xlsx" in to_Open):
                 self.ready = True
+                self.incorrect_file = False
                 csv_from_excel(to_Open)
                 self.load_label['text'] = "Selected File: "+ file_name
                 input_file = open("pretest.csv").readlines()
                 load_everything_in()
                 pick_12()
             else:
+                self.incorrect_file = True
                 self.load_label['text'] = 'Current file: ' + file_name + '\nPlease select an Excel file (.xlsx)'
 
 class TrainingInstructionsWindow(ttk.Frame):
@@ -338,16 +340,19 @@ class TrainingController:
         self.root = root
         self.model = TrainingModel(self)
         self.view = TrainingView(root.container, self)
-        exit()
+        #exit()
         self.mylist = list(self.model.myGenerator())
+        print()
+        print()
+        print()
+        for word in self.mylist:
+           print(word[0].name)
+         
         random.shuffle(self.mylist)
-        print()
-        print()
-        print()
         self.no_reps(self.mylist)
         i = 0
         for word in self.mylist:
-           print(word[0].name)
+           #print(word[0].name)
            i += 1
         
         print("here",i)
@@ -493,9 +498,9 @@ class PostTestProductionController:
             print(self.noun.name)
         except StopIteration:
             print('Post-test production module finished')
-            self.model.results = pd.DataFrame(self.model.result_dicts,
-                    columns = ['Word', 'T/F', 'Participant Answer', 'Condition'])
-            self.model.results.to_excel(self.root.writer, 'Post-Test Production')
+            #self.model.results = pd.DataFrame(self.model.result_dicts,
+            #        columns = ['Word', 'T/F', 'Participant Answer', 'Condition'])
+            #self.model.results.to_excel(self.root.writer, 'Post-Test Production')
 
             with open(str(self.root.LoginWindow.participant_code)\
                     +'_production_results.txt','w') as f:

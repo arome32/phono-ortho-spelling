@@ -22,8 +22,6 @@ What Rebekkah asked for:
 
 
 What I still need to do (see above):
-    1 (is there a sound for this, currently using speaker7 in the active)
-    2 (trying to figure it out)
     7 (need to ask what she wants me to change it to, just a bunch of buttons?)
     8 (look into this)
     9 (talk on friday)
@@ -31,13 +29,3 @@ What I still need to do (see above):
 Reminder for later:
   go back and figure out how to make the program exit by itself without breakiing anything
   go back and redo the anti repition function you wrote
-  
-
-
-
-
-!!!IMPORTANT!!!
-   Split the pretest from the overall program
-   figure out how to use flask to get the pretest online
-   figure out how the training/posttest gets the words that are being used 
-   
