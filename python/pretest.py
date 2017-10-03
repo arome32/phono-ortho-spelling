@@ -322,7 +322,7 @@ class EndPretestWindow(ttk.Frame):
         self.parent = parent
         self.controller = controller
 
-        self.label = ttk.Label(self, text = "Pretest done")
+        self.label = ttk.Label(self, text = "Thank you for participating.\nWe will be in touch via email shortly.")
         self.label.grid()
 
 

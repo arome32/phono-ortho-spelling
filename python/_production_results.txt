@@ -1,0 +1,1 @@
+{'Word': 'Chemiosmotic', 'Length': 'long', 'Participant Answer': 'g', 'Condition': 'low', 'T/F': 0}

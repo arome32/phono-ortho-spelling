@@ -1,4 +1,1 @@
-Word
-T/F
-Participant Answer
-Condition
+{'Word': 'Nucleoid', 'Length': 'short', 'Participant Answer': 'poop', 'Condition': 'low', 'T/F': 0}

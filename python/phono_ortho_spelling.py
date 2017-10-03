@@ -48,6 +48,7 @@ import typing
 from typing import List, Tuple
 import tkinter as tk
 from tkinter import ttk
+from tkinter import *
 from tkinter.scrolledtext import ScrolledText
 import pandas as pd
 import time
@@ -56,6 +57,7 @@ import time
 
 input_file = None
 dicts = []
+var = None
 
 
 
@@ -113,7 +115,7 @@ def pick_12():
     to_do = dicts
     new_dicts = []
     i = 0
-    while i < 12:
+    while i < 1:
         num = randint(0,len(dicts)-1)
         if(dicts[num] in new_dicts):
            continue
@@ -340,7 +342,6 @@ class TrainingController:
         self.root = root
         self.model = TrainingModel(self)
         self.view = TrainingView(root.container, self)
-        #exit()
         self.mylist = list(self.model.myGenerator())
         print()
         print()
@@ -502,12 +503,19 @@ class PostTestProductionController:
             #        columns = ['Word', 'T/F', 'Participant Answer', 'Condition'])
             #self.model.results.to_excel(self.root.writer, 'Post-Test Production')
 
-            with open(str(self.root.LoginWindow.participant_code)\
+            #with open(str(self.root.LoginWindow.participant_code)\
+            #        +'_production_results.txt','w') as f:
+            #    for word in self.model.results:
+            #        f.write(str(word)+'\n')
+            #self.root.show_post_test_perception_instructions()
+            #pass
+            with open(self.root.LoginWindow.participant_code.get()\
                     +'_production_results.txt','w') as f:
-                for word in self.model.results:
-                    f.write(str(word)+'\n')
+                    for word in self.model.result_dicts:
+                        f.write(str(word)+'\n')
             self.root.show_post_test_perception_instructions()
             pass
+            print("finished with it")
     
     def disable_stuff(self):
         self.view.EnterButton.state(["disabled"]) 
@@ -557,30 +565,38 @@ class PostTestPerceptionView(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.parent, self.controller = parent, controller
+        self.training = True
         self.controller.root.title('Post-Test Perception')
         self.ImageBox = ttk.Label(self)
         self.ImageBox.grid(row = 0, columnspan = 2)
-        self.spellings = [tk.Label(self, text = "spelling_"+str(i), height = 1,
+        self.nextButton = tk.Button(self, text ="Select Word", command = self.sel)
+
+        self.spellings = [tk.Radiobutton(self, text = "spelling_"+str(i), variable=self.controller.var,
+            value = i, command=self.controller.sel, height = 1,
             width = 20, borderwidth=1, relief="solid", font = ('Helvetica', '20'))
             for i in range(0,6)]
-        for label in self.spellings:
-            label.bind("<Button-1>",self.controller.check_spelling, label)
-
-        # Place the spellings in a grid
+        
+       
+# Place the spellings in a grid
         self.spellings[0].grid(row = 2, column = 0)
         self.spellings[1].grid(row = 2, column = 1)
         self.spellings[2].grid(row = 3, column = 0)
         self.spellings[3].grid(row = 3, column = 1)
         self.spellings[4].grid(row = 4, column = 0)
         self.spellings[5].grid(row = 4, column = 1)
-
+       
         self.ready_button = ttk.Button(self, text="Ready",
                 command=self.controller.set_first_image)
+
+    def sel(self):
+        self.controller.check_spelling(self.controller.var.get())
+    
 
 
 class PostTestPerceptionController:
     def __init__(self, root):
         self.root = root
+        self.var = StringVar()
         self.model = PostTestPerceptionModel(self.root.assigned_nouns)
         self.view = PostTestPerceptionView(root.container, self)
         self.set_training_image()
@@ -596,13 +612,22 @@ class PostTestPerceptionController:
         self.model.plausible_spellings = ['earth','erth','ert','urth','urt','earthe']
         random.shuffle(self.model.plausible_spellings)
         for i in range(0,6):
-            self.view.spellings[i].config(text = self.model.plausible_spellings[i])
+            word = self.model.plausible_spellings[i],
+            self.view.spellings[i].config(text = word, value = word )
 
     def set_first_image(self, *args):
         """ Set the first image and remove the 'Ready' button """
         self.set_image()
         self.view.ready_button.destroy()
+        self.view.nextButton.grid(row = 5, columnspan = 2)
 
+    def sel(self):
+        print("SEL")
+        selection = "You have selected "+ str(self.var.get())
+        #self.view.nextButton.grid(row = 5, columnspan = 2)
+        self.check_spelling(self.var.get())
+        print(selection)
+    
     def set_image(self, *args):
         self.noun = next(self.model.nouns)
         photo = PIL.ImageTk.PhotoImage(PIL.Image.open(self.noun.img)) 
@@ -623,9 +648,12 @@ class PostTestPerceptionController:
                     text = self.model.plausible_spellings[i].lower())
         self.root.after(500, self.play_image_audio, audio)
 
-    def check_spelling(self, label):
+    def Nothing(self):
+        return
+
+    def check_spelling(self, word):
         mydict = {}
-        selected_spelling = label.widget.cget("text")
+        selected_spelling = word
         mydict['Participant Answer'] = selected_spelling
         mydict['Choices'] = ', '.join(self.model.plausible_spellings)
 
@@ -635,12 +663,15 @@ class PostTestPerceptionController:
             if selected_spelling == 'earth':
                 mydict['T/F'] = 1
                 play_audio('instructions_audio_files/directions_goodnowlets.wav')
+                #self.view.nextButton.destroy()
+                self.view.ready_button.grid(row = 5, columnspan = 2)
+                for i in range(0,6):
+                   self.view.spellings[i].config(command = self.Nothing ) 
             else:
                 mydict['T/F'] = 0
                 play_audio('instructions_audio_files/directions_oops.wav')
+                #self.view.nextButton.destroy()
             self.model.results.append(mydict)
-            self.view.ready_button.grid(row = 5, columnspan = 2)
-
         else:
             mydict['Word'] = self.noun.name
             mydict['Condition'] = self.noun.variability
@@ -654,11 +685,12 @@ class PostTestPerceptionController:
                 self.set_image()
             except StopIteration:
                 print('post test perception finished')
-                self.model.results_dataframe = pd.DataFrame(self.model.results,
-                        columns = ['Word', 'T/F', 'Participant Answer', 
-                                   'Choices', 'Condition'])
-                self.model.results_dataframe.to_excel(self.root.writer,
-                        'Post-Test Perception')
+                #self.model.results_dataframe = pd.DataFrame(self.model.results,
+                #        columns = ['Word', 'T/F', 'Participant Answer', 
+                #                   'Choices', 'Condition'])
+                #self.model.results_dataframe.to_excel(self.root.writer,
+                #        'Post-Test Perception')
+                print("figure out how to write the output")
                 self.root.show_final_screen()
 
     def play_image_audio(self, filepath):
