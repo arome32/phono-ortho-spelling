@@ -95,7 +95,11 @@ def csv_from_excel(path):
 
 def load_everything_in():
     for i in range(1, len(input_file)):
-       line = input_file[i]
+       if input_file[i].strip() == "":
+          continue
+          
+       line = input_file[i].strip()
+
        line = line.split(",")[1:]
        
        tf = int(line[2].replace('.0','').replace('"',''))
