@@ -119,7 +119,7 @@ def pick_12():
     to_do = dicts
     new_dicts = []
     i = 0
-    while i < 1:
+    while i < 12:
         num = randint(0,len(dicts)-1)
         if(dicts[num] in new_dicts):
            continue
