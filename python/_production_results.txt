@@ -1,1 +1,0 @@
-{'Word': 'Chlorophyll', 'Length': 'short', 'Participant Answer': 'chlorafill', 'Condition': 'high', 'T/F': 0}

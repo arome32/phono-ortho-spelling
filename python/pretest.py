@@ -144,7 +144,7 @@ class PretestInstructionsWindow(ttk.Frame):
         self.parent, self.controller = parent, controller
 
         # Define elements
-        with open('pretest_instructions.txt', 'r') as f:
+        with open('instructions/pretest_instructions.txt', 'r') as f:
             data = f.read()
 
         pretest_instructions = ScrolledText(self, borderwidth=10, 
@@ -302,7 +302,7 @@ class PretestController:
             the study? """
         self.model.results = pd.DataFrame(self.model.dicts,
                 columns = ['ORTHO TARGET', 'PRODUCTION','T/F', 'Condition'])
-        self.root.filename = 'pretest_'+ self.root.participant_code.replace(" ","_")
+        self.root.filename = 'output_pretest/pretest_'+ self.root.participant_code.replace(" ","_")
         self.root.writer = pd.ExcelWriter(self.root.filename+'.xlsx')
         self.model.results.to_excel(self.root.writer, 'Pretest')
 

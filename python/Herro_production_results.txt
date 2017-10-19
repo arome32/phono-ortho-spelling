@@ -1,1 +1,0 @@
-{'Word': 'Tertiary', 'Length': 'short', 'Participant Answer': 'poop', 'Condition': 'low', 'T/F': 0}

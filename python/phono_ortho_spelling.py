@@ -54,13 +54,11 @@ import pandas as pd
 import time
 
 
-
 input_file = None
 dicts = []
 var = None
 
-
-
+to_output = []
 
 
 #==============================================================================
@@ -119,13 +117,18 @@ def pick_12():
     to_do = dicts
     new_dicts = []
     i = 0
-    while i < 12:
+    num = 5
+
+    while i < num:
+        print("i ",i)
         num = randint(0,len(dicts)-1)
         if(dicts[num] in new_dicts):
-           continue
+            print("one")
+            continue
         else:
-           new_dicts.append(dicts[num]) 
-           i += 1
+            print("two")
+            new_dicts.append(dicts[num]) 
+            i += 1
     #for word in new_dicts:
     #    print(word)
     dicts =  new_dicts
@@ -160,7 +163,9 @@ class Noun(object):
         self.perception_spelling = None
         self.variability = None
         self.pretest_correct = None
-
+    
+    def __str__(self):
+        return self.name + " " + str(self.length) + " " + str(self.production_spelling) + " " + str(self.perception_spelling)
 
 # List of nouns, divided into short and long nouns
 
@@ -258,7 +263,7 @@ class TrainingInstructionsWindow(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.parent, self.controller = parent, controller
-        with open('training_instructions.txt', 'r') as f:
+        with open('instructions/training_instructions.txt', 'r') as f:
             data = f.read()
         self.controller.bind('<Return>',self.proceed_to_training)
         ttk.Label(self, text = "Training instructions").grid()
@@ -351,17 +356,17 @@ class TrainingController:
         print()
         print()
         for word in self.mylist:
-           print(word[0].name)
-         
+            print(word[0].name)
+        
         random.shuffle(self.mylist)
         self.no_reps(self.mylist)
         i = 0
         for word in self.mylist:
-           #print(word[0].name)
-           i += 1
+            #print(word[0].name)
+            i += 1
         
-        print("here",i)
-        print()
+            #print("here",i)
+            #print()
 
         self.iterator = iter(self.mylist)
         self.set_image()
@@ -513,10 +518,13 @@ class PostTestProductionController:
             #        f.write(str(word)+'\n')
             #self.root.show_post_test_perception_instructions()
             #pass
-            with open(self.root.LoginWindow.participant_code.get()\
-                    +'_production_results.txt','w') as f:
-                    for word in self.model.result_dicts:
-                        f.write(str(word)+'\n')
+            for word in self.model.result_dicts:
+                to_output.append(word)
+
+            #with open(self.root.LoginWindow.participant_code.get()\
+            #        +'_production_results.txt','w') as f:
+            #        for word in self.model.result_dicts:
+            #            f.write(str(word)+'\n')
             self.root.show_post_test_perception_instructions()
             pass
             print("finished with it")
@@ -581,7 +589,7 @@ class PostTestPerceptionView(ttk.Frame):
             for i in range(0,6)]
         
        
-# Place the spellings in a grid
+        # Place the spellings in a grid
         self.spellings[0].grid(row = 2, column = 0)
         self.spellings[1].grid(row = 2, column = 1)
         self.spellings[2].grid(row = 3, column = 0)
@@ -626,9 +634,7 @@ class PostTestPerceptionController:
         self.view.nextButton.grid(row = 5, columnspan = 2)
 
     def sel(self):
-        print("SEL")
         selection = "You have selected "+ str(self.var.get())
-        #self.view.nextButton.grid(row = 5, columnspan = 2)
         self.check_spelling(self.var.get())
         print(selection)
     
@@ -648,8 +654,9 @@ class PostTestPerceptionController:
             self.model.plausible_spellings.append(wrong_spellings)
         random.shuffle(self.model.plausible_spellings)
         for i in range(0,6):
+            to_put = self.model.plausible_spellings[i].lower()
             self.view.spellings[i].config(
-                    text = self.model.plausible_spellings[i].lower())
+                    text = to_put, value = to_put)
         self.root.after(500, self.play_image_audio, audio)
 
     def Nothing(self):
@@ -659,6 +666,7 @@ class PostTestPerceptionController:
         mydict = {}
         selected_spelling = word
         mydict['Participant Answer'] = selected_spelling
+        print(selected_spelling)
         mydict['Choices'] = ', '.join(self.model.plausible_spellings)
 
         if self.noun == 'earth':
@@ -677,6 +685,9 @@ class PostTestPerceptionController:
                 #self.view.nextButton.destroy()
             self.model.results.append(mydict)
         else:
+            for dic in to_output:
+                if self.noun.name == dic['Word']:
+                   dic['Forced'] = selected_spelling
             mydict['Word'] = self.noun.name
             mydict['Condition'] = self.noun.variability
             if self.noun.name == selected_spelling:
@@ -767,12 +778,30 @@ class MainApplication(tk.Tk):
         self.PostTestPerceptionController.view.grid(row=0,column=0,sticky="nsew")
         self.PostTestPerceptionController.view.tkraise()
 
+    def final_output(self):
+        output_file = open("output_test/" + self.LoginWindow.participant_code.get()\
+            +"_test_results.csv",'w')
+        output_file.write("Condition,Ortho Target,Ortho Production,Forced\n")
+        for word in to_output:
+            output_file.write(word['Condition']+ "," + word['Word']+ "," +\
+                word['Participant Answer']+ "," + word['Forced']+"\n")
+        output_file.close()
+
     def show_final_screen(self):
         self.FinalScreen = FinalScreen(self.container, self)
         self.title("Final Screen")
         self.FinalScreen.grid(row = 0, column = 0, sticky = "nsew")
-        self.writer.save()
+        #self.writer.save()
         #time.sleep(5)
+        self.final_output()
+        #with open(self.LoginWindow.participant_code.get()\
+        #    +'_production_results.txt','w') as f:
+        #    for word in to_output:
+        #        f.write(str(word)+'\n')
+        #print(len(to_output))
+        
+        #for word in to_output:
+        #    print(str(word)) 
         print("done")
         #exit()
 

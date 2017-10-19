@@ -1,1 +1,0 @@
-{'Word': 'Catalyst', 'Length': 'short', 'Participant Answer': 'catalist', 'Condition': 'low', 'T/F': 0}
