@@ -49,17 +49,18 @@ from typing import List, Tuple
 import tkinter as tk
 from tkinter import ttk
 from tkinter import *
+from tkinter import Tk
 from tkinter.scrolledtext import ScrolledText
 import pandas as pd
 import time
-
-
 
 
 input_file = None
 dicts = []
 var = None
 test = False
+see = False
+
 
 to_output = []
 
@@ -76,8 +77,8 @@ def play_audio(filepath, wait = False):
 
 def open_file():
    global input_file
-   root = tk.Tk()
-   root.withdraw()
+   #root = tk.Tk()
+   Tk().withdraw()
 
    file_path = filedialog.askopenfilename()
    return file_path
@@ -112,7 +113,6 @@ def load_everything_in():
                   'Condition' : line[3].replace('"',"")
                }
        dicts.append(toAdd)
-       #print(toAdd)
 
 
 def pick_12():
@@ -123,23 +123,20 @@ def pick_12():
     num = 1
 
     while i < num:
-        #print("i ",i)
         sel_word = randint(0,len(dicts)-1)
         if(dicts[sel_word] in new_dicts):
             continue
         else:
             new_dicts.append(dicts[sel_word]) 
             i += 1
-    #for word in new_dicts:
-    #    print(word)
     dicts =  new_dicts
     
 def use_pretest_nouns(nouns): 
     new_nouns = []
-    print(len(dicts))
 
     for word in dicts:
-        if not test:
+        if test or see:
+            print(len(dicts))
             print(word)
         for noun in nouns:
            if word["Word"] == noun.name:
@@ -193,7 +190,6 @@ class LoginWindow(ttk.Frame):
 
         super().__init__(parent)
         self.controller = controller
-        # self.grid(column = 0, row = 0)
 
         # Define the elements
         title = ttk.Label(self,
@@ -365,12 +361,8 @@ class TrainingController:
         self.no_reps(self.mylist)
         i = 0
         for word in self.mylist:
-            #print(word[0].name)
             i += 1
         
-            #print("here",i)
-            #print()
-
         self.iterator = iter(self.mylist)
         self.set_image()
     
@@ -398,9 +390,6 @@ class TrainingController:
             self.view.ImageBox.image=photo
             self.root.after(1000, self.play_image_audio, audio)
         except StopIteration:
-            #df = pd.DataFrame(self.model.results, 
-            #        columns = ['Word', 'Talker', 'Variability'])
-            #df.to_excel(self.root.writer, 'Training')
             self.root.show_post_test_production_instructions()
             pass
 
@@ -546,7 +535,6 @@ class PostTestPerceptionInstructions(ttk.Frame):
         wave_obj = sa.WaveObject.from_wave_file('instructions_audio_files/'
                                         'directions_posttestrecognition.wav')
         play_obj = wave_obj.play()
-        # play_obj.wait_done()
 
         ttk.Button(self, text = 'Ready', 
                 command = self.controller.start_post_test_perception).grid()
@@ -640,15 +628,22 @@ class PostTestPerceptionController:
                 self.noun.name.lower()].tolist()
         self.model.plausible_spellings = [self.noun.name]
         if self.noun.name.lower() != self.noun.production_spelling.lower():
-            print(self.noun.production_spelling)
-            print("no")
+            #
+            #this is where I'm going to need to figure out how to replace the 
+            #incorrect spelling word assuming that the user spelled the word
+            #that matches one of the pre disposed spellings
+            # 
+            #
+            #print(self.noun.production_spelling)
+            #print("no")
             self.model.plausible_spellings.append(self.noun.production_spelling)
-            self.model.plausible_spellings+= random.sample(wrong_spellings, 4)
+            adding = random.sample(wrong_spellings,4)
+            while(self.noun.production_spelling in adding):
+               adding = random.sample(wrong_spellings,4)
+            self.model.plausible_spellings+= adding
         else:
             #print("yes")
-            for word in wrong_spellings:
-               #print(word)
-               self.model.plausible_spellings.append(word)
+            self.model.plausible_spellings+= random.sample(wrong_spellings, 5)
         random.shuffle(self.model.plausible_spellings)
         for i in range(0,6):
             to_put = self.model.plausible_spellings[i].lower()
@@ -673,14 +668,12 @@ class PostTestPerceptionController:
             if selected_spelling == 'earth':
                 mydict['T/F'] = 1
                 play_audio('instructions_audio_files/directions_goodnowlets.wav')
-                #self.view.nextButton.destroy()
                 self.view.ready_button.grid(row = 5, columnspan = 2)
                 for i in range(0,6):
                    self.view.spellings[i].config(command = self.Nothing ) 
             else:
                 mydict['T/F'] = 0
                 play_audio('instructions_audio_files/directions_oops.wav')
-                #self.view.nextButton.destroy()
             self.model.results.append(mydict)
         else:
             for dic in to_output:
@@ -701,11 +694,6 @@ class PostTestPerceptionController:
             except StopIteration:
                 if test:
                     print('post test perception finished')
-                #self.model.results_dataframe = pd.DataFrame(self.model.results,
-                #        columns = ['Word', 'T/F', 'Participant Answer', 
-                #                   'Choices', 'Condition'])
-                #self.model.results_dataframe.to_excel(self.root.writer,
-                #        'Post-Test Perception')
                     print("figure out how to write the output")
                 self.root.show_final_screen()
 
@@ -717,15 +705,58 @@ class FinalScreen(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
-        self.closeButton = ttk.Button(self, text="Exit", command=self.close_game)
+        self.test_name = self.controller.LoginWindow.participant_code.get().replace(" ","_") 
+        self.closeButton = ttk.Button(self, text="Exit", command=self.fin)
         self.grid(column = 0, row = 0)
         
         # Define the elements
         tk.Label(self, text = "Thank you for your time", height = 10, width = 20, 
                 font = ("Helvetica", "20")).grid(row = 0, column = 2)
         
-        self.closeButton.grid(row = 2, column = 2)
+        self.closeButton.grid(row = 2, column = 2)   
+
+
+    def get_phono(self, phono, word):
+        for line in phono:
+            line = line.strip().split(',')
+            if line[0].lower() == word.lower():
+                return line[1]
     
+    def fin(self):
+        pretest = open("pretest.csv").readlines()
+        test = open("output_test/" + self.test_name +"_test_results.csv").readlines()
+        phono = open("Stimuli/orthography_and_phonology.csv").readlines()
+        final = open("output_final/"+ self.test_name +"_final.csv","w")
+
+        PRE = "Pre,"
+        POST = "Post,"
+
+        to_write = "Phase,Condition,Ortho Target,Ortho Production,Production Correct,Phono Target,"+\
+                   "Phono production,Forced Selection,Forced Correct\n"
+        final.write(to_write)
+        for post in test[1:]:
+            post = post.strip().split(",")
+            pTarget = self.get_phono(phono, post[1])
+            for pre in pretest[1:]:
+                pre = pre.strip().split(",")
+                to_write = ""
+                if post[1].lower() == pre[1].strip('"').lower():
+                    to_write += PRE + "N/A,"+ pre[1] +","+ pre[2] +","  
+                    num = (int(float(pre[3].strip('"'))))
+                    if num == 1:
+                        to_write += "True," 
+                    elif num == 0:
+                        to_write += "False," 
+                    else:
+                        to_write += "N/A," 
+                    to_write += pTarget +",,N/A,N/A\n"
+                    final.write(to_write)
+            to_write = POST + post[0] + "," + post[1] +","+ post[2] +","+ post[3] +\
+                       ","+ pTarget +",,"+ post[4] + ","+post[5] + "\n"
+            final.write(to_write)
+        self.close_game()
+
+
     def close_game(self):
         os.remove("pretest.csv")
         exit()
@@ -740,8 +771,6 @@ class MainApplication(tk.Tk):
         self.examiner = 'default_examiner'
         self.participant_code = 'default_participant_code'
         self.assigned_nouns = assign_nouns(short_nouns, long_nouns)
-        #for noun in self.assigned_nouns:
-        #   print(noun)
         self.writer = None
 
     def show_login_window(self):
@@ -789,34 +818,32 @@ class MainApplication(tk.Tk):
         self.PostTestPerceptionController.view.tkraise()
 
     def final_output(self):
-        output_file = open("output_test/" + self.LoginWindow.participant_code.get()\
-            +"_test_results.csv",'w')
-        output_file.write("Condition,Ortho Target,Ortho Production,Forced\n")
+        name = self.LoginWindow.participant_code.get().replace(" ","_")
+        test_output = "output_test/" + name + "_test_results.csv"
+        
+        output_file = open(test_output,'w')
+        output_file.write("Condition,Ortho Target,Ortho Production,Production Correct,"+\
+               "Forced,Forced Correct\n")
         for word in to_output:
             output_file.write(word['Condition']+ "," + word['Word']+ "," +\
-                word['Participant Answer']+ "," + word['Forced']+"\n")
+            word['Participant Answer']+","+\
+            str(word['Participant Answer'].lower() == word['Word'].lower()) +","+\
+            word['Forced']+","+\
+            str(word['Word'].lower() == word['Forced'].lower()) + "\n")
+
         output_file.close()
 
     def show_final_screen(self):
         self.FinalScreen = FinalScreen(self.container, self)
         self.title("Final Screen")
         self.FinalScreen.grid(row = 0, column = 0, sticky = "nsew")
-        #self.writer.save()
-        #time.sleep(5)
         self.final_output()
-        #with open(self.LoginWindow.participant_code.get()\
-        #    +'_production_results.txt','w') as f:
-        #    for word in to_output:
-        #        f.write(str(word)+'\n')
-        #print(len(to_output))
         
-        #for word in to_output:
-        #    print(str(word)) 
         if test:
             print("done")
-        #exit()
+    
 
-if __name__=="__main__":
+def main():
     app = MainApplication()
     app.mainloop()
-
+main()
