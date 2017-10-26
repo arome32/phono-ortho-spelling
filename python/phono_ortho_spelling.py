@@ -54,9 +54,12 @@ import pandas as pd
 import time
 
 
+
+
 input_file = None
 dicts = []
 var = None
+test = False
 
 to_output = []
 
@@ -117,17 +120,15 @@ def pick_12():
     to_do = dicts
     new_dicts = []
     i = 0
-    num = 5
+    num = 1
 
     while i < num:
-        print("i ",i)
-        num = randint(0,len(dicts)-1)
-        if(dicts[num] in new_dicts):
-            print("one")
+        #print("i ",i)
+        sel_word = randint(0,len(dicts)-1)
+        if(dicts[sel_word] in new_dicts):
             continue
         else:
-            print("two")
-            new_dicts.append(dicts[num]) 
+            new_dicts.append(dicts[sel_word]) 
             i += 1
     #for word in new_dicts:
     #    print(word)
@@ -138,7 +139,8 @@ def use_pretest_nouns(nouns):
     print(len(dicts))
 
     for word in dicts:
-        print(word)
+        if not test:
+            print(word)
         for noun in nouns:
            if word["Word"] == noun.name:
                noun.pretest_correct = False
@@ -352,11 +354,12 @@ class TrainingController:
         self.model = TrainingModel(self)
         self.view = TrainingView(root.container, self)
         self.mylist = list(self.model.myGenerator())
-        print()
-        print()
-        print()
-        for word in self.mylist:
-            print(word[0].name)
+        if test:
+            print()
+            print()
+            print()
+            for word in self.mylist:
+                print(word[0].name)
         
         random.shuffle(self.mylist)
         self.no_reps(self.mylist)
@@ -505,29 +508,17 @@ class PostTestProductionController:
             self.noun = next(self.model.nouns)
             self.view.set_image(self.noun)
             play_audio(self.noun.novel_talker)
-            print(self.noun.name)
+            if test:
+                print(self.noun.name)
         except StopIteration:
-            print('Post-test production module finished')
-            #self.model.results = pd.DataFrame(self.model.result_dicts,
-            #        columns = ['Word', 'T/F', 'Participant Answer', 'Condition'])
-            #self.model.results.to_excel(self.root.writer, 'Post-Test Production')
-
-            #with open(str(self.root.LoginWindow.participant_code)\
-            #        +'_production_results.txt','w') as f:
-            #    for word in self.model.results:
-            #        f.write(str(word)+'\n')
-            #self.root.show_post_test_perception_instructions()
-            #pass
+            if test:
+                print('Post-test production module finished')
             for word in self.model.result_dicts:
                 to_output.append(word)
-
-            #with open(self.root.LoginWindow.participant_code.get()\
-            #        +'_production_results.txt','w') as f:
-            #        for word in self.model.result_dicts:
-            #            f.write(str(word)+'\n')
             self.root.show_post_test_perception_instructions()
             pass
-            print("finished with it")
+            if test:
+                print("finished with it")
     
     def disable_stuff(self):
         self.view.EnterButton.state(["disabled"]) 
@@ -636,7 +627,8 @@ class PostTestPerceptionController:
     def sel(self):
         selection = "You have selected "+ str(self.var.get())
         self.check_spelling(self.var.get())
-        print(selection)
+        if test:
+            print(selection)
     
     def set_image(self, *args):
         self.noun = next(self.model.nouns)
@@ -647,11 +639,16 @@ class PostTestPerceptionController:
         wrong_spellings = self.model.plausible_spellings_table[
                 self.noun.name.lower()].tolist()
         self.model.plausible_spellings = [self.noun.name]
-        if not self.noun.production_spelling_is_correct:
+        if self.noun.name.lower() != self.noun.production_spelling.lower():
+            print(self.noun.production_spelling)
+            print("no")
             self.model.plausible_spellings.append(self.noun.production_spelling)
             self.model.plausible_spellings+= random.sample(wrong_spellings, 4)
         else:
-            self.model.plausible_spellings.append(wrong_spellings)
+            #print("yes")
+            for word in wrong_spellings:
+               #print(word)
+               self.model.plausible_spellings.append(word)
         random.shuffle(self.model.plausible_spellings)
         for i in range(0,6):
             to_put = self.model.plausible_spellings[i].lower()
@@ -666,7 +663,8 @@ class PostTestPerceptionController:
         mydict = {}
         selected_spelling = word
         mydict['Participant Answer'] = selected_spelling
-        print(selected_spelling)
+        if test:
+            print(selected_spelling)
         mydict['Choices'] = ', '.join(self.model.plausible_spellings)
 
         if self.noun == 'earth':
@@ -695,17 +693,20 @@ class PostTestPerceptionController:
             else:
                 mydict['T/F'] = 0
             self.model.results.append(mydict)
+            self.var.set(None)
+            
 
             try:
                 self.set_image()
             except StopIteration:
-                print('post test perception finished')
+                if test:
+                    print('post test perception finished')
                 #self.model.results_dataframe = pd.DataFrame(self.model.results,
                 #        columns = ['Word', 'T/F', 'Participant Answer', 
                 #                   'Choices', 'Condition'])
                 #self.model.results_dataframe.to_excel(self.root.writer,
                 #        'Post-Test Perception')
-                print("figure out how to write the output")
+                    print("figure out how to write the output")
                 self.root.show_final_screen()
 
     def play_image_audio(self, filepath):
@@ -716,10 +717,19 @@ class FinalScreen(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
+        self.closeButton = ttk.Button(self, text="Exit", command=self.close_game)
         self.grid(column = 0, row = 0)
+        
         # Define the elements
         tk.Label(self, text = "Thank you for your time", height = 10, width = 20, 
-                font = ("Helvetica", "20")).grid()
+                font = ("Helvetica", "20")).grid(row = 0, column = 2)
+        
+        self.closeButton.grid(row = 2, column = 2)
+    
+    def close_game(self):
+        os.remove("pretest.csv")
+        exit()
+        
 
 class MainApplication(tk.Tk):
     def __init__(self):
@@ -802,9 +812,11 @@ class MainApplication(tk.Tk):
         
         #for word in to_output:
         #    print(str(word)) 
-        print("done")
+        if test:
+            print("done")
         #exit()
 
 if __name__=="__main__":
     app = MainApplication()
     app.mainloop()
+

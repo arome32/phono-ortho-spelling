@@ -1,0 +1,9 @@
+"TEST PHASE","Condition","Ortho Target ","Ortho Production",LD,"Phono Target","Phono production",LD
+"PRE","HIGH","purine","purene",1,"pyRin","pyRin",0
+"POST","HIGH","purine","purene",1,"pyRin","pyRin",0
+"PRE","HIGH","dynein","dynean",1,"dYnin","dYnin",0
+"POST","HIGH","dynein","dinein",1,"dYnin","dYnin",0
+"PRE","HIGH","kinesin","kenesim",2,"kInisxn","kInisxm",1
+"POST","HIGH","kinesin","kenesin",1,"kInisxn","kInisxn",0
+"PRE","HIGH","isotope","izotop",2,"Ysxtop","Yzxtop",1
+"POST","HIGH","isotope","isutop",2,"Ysxtop","Ysutop",1
