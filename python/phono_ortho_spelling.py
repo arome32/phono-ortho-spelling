@@ -120,7 +120,7 @@ def pick_12():
     to_do = dicts
     new_dicts = []
     i = 0
-    num = 1
+    num = 12
 
     while i < num:
         sel_word = randint(0,len(dicts)-1)
