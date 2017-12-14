@@ -59,7 +59,7 @@ input_file = None
 dicts = []
 var = None
 test = False
-see = False
+see = True
 
 
 to_output = []
@@ -101,6 +101,7 @@ def load_everything_in():
           continue
           
        line = input_file[i].strip()
+       print(line)
 
        line = line.split(",")[1:]
        
@@ -245,7 +246,7 @@ class LoginWindow(ttk.Frame):
         if(to_Open == '()' or to_Open == ""):
             self.load_label['text'] = 'Please select a file'
         else:
-            if(".xlsx" in to_Open):
+            if(".xlsx" in to_Open or ".csv" in to_Open):
                 self.ready = True
                 self.incorrect_file = False
                 csv_from_excel(to_Open)

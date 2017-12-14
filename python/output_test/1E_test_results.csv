@@ -1,0 +1,13 @@
+Condition,Ortho Target,Ortho Production,Production Correct,Forced,Forced Correct
+high,Reducer,reducer,True,reducer,True
+low,Chlorophyll,chlorophil,False,chlorophyll,True
+low,Ribonucleoside,ribonucleiocide,False,ribonucleiocide,False
+low,Centrioles,centrioles,True,centrioles,True
+high,Cytoplasm,cytoplasm,True,cytoplasm,True
+high,Amphipathic,amphepathic,False,amphipathic,True
+low,Isotonic,isotonic,True,isotonic,True
+high,Nucleotides,nucleiotides,False,nucleiotides,False
+high,Dynein,dynene,False,dynein,True
+low,Tertiary,terchiary,False,terchiary,False
+low,Exergonic,exergonic,True,exergonic,True
+low,Purine,purine,True,purine,True
